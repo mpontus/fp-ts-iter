@@ -157,4 +157,41 @@ describe('AsyncIter', () => {
       )()
     ).toEqual(['a', 'bc'])
   })
+
+  // -------------------------------------------------------------------------------------
+  // utils
+  // -------------------------------------------------------------------------------------
+
+  describe('replay', () => {
+    it('conserves iterator', async () => {
+      const generator = jest.fn(async function* () {
+        yield 1
+        yield 2
+        yield 3
+      })
+
+      const result = pipe(generator, _.replay, _.toArray)
+
+      expect(await result()).toEqual([1, 2, 3])
+      expect(await result()).toEqual([1, 2, 3])
+      expect(await result()).toEqual([1, 2, 3])
+      expect(generator).toHaveBeenCalledTimes(1)
+    })
+
+    it('supports concurrent invocation', async () => {
+      const generator = jest.fn(async function* () {
+        yield 1
+        yield 2
+        yield 3
+      })
+      const result = pipe(generator, _.replay, _.toArray)
+
+      expect(await Promise.all([result(), result(), result()])).toEqual([
+        [1, 2, 3],
+        [1, 2, 3],
+        [1, 2, 3],
+      ])
+      expect(generator).toHaveBeenCalledTimes(1)
+    })
+  })
 })

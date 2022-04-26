@@ -25,6 +25,7 @@ import { MonadIO1 } from 'fp-ts/lib/MonadIO'
 import { MonadTask1 } from 'fp-ts/lib/MonadTask'
 import { Pointed1 } from 'fp-ts/lib/Pointed'
 import { Task } from 'fp-ts/lib/Task'
+import { Subject } from './internal/Subject'
 
 // -------------------------------------------------------------------------------------
 // model
@@ -441,3 +442,26 @@ export const chainTaskK =
 export const chainFirstTaskK =
   /*#__PURE__*/
   chainFirstTaskK_(FromTask, Chain)
+
+// -------------------------------------------------------------------------------------
+// utils
+// -------------------------------------------------------------------------------------
+
+/**
+ * Replay emitted values for each subscriber
+ *
+ * @since 0.1.0
+ */
+export function replay<A>(iter: AsyncIter<A>): AsyncIter<A> {
+  let subject: Subject<A>
+
+  return async function* () {
+    const source = subject ?? iter()
+    const dest = (subject = new Subject())
+    for await (const item of source) {
+      dest.onNext(item)
+      yield item
+    }
+    dest.onReturn()
+  }
+}
