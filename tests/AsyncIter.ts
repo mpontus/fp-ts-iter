@@ -1,4 +1,11 @@
-import { io as I, task as T } from 'fp-ts'
+import {
+  either as E,
+  io as I,
+  number as n,
+  option as O,
+  string as s,
+  task as T,
+} from 'fp-ts'
 import { pipe } from 'fp-ts/lib/function'
 import * as _ from '../src/AsyncIter'
 
@@ -156,6 +163,74 @@ describe('AsyncIter', () => {
         _.toArray
       )()
     ).toEqual(['a', 'bc'])
+  })
+
+  describe('Filterable', () => {
+    it('compact', async () => {
+      expect(
+        await pipe(
+          of(O.some(1), O.some(2), O.none, O.some(3)),
+          _.compact,
+          _.toArray
+        )()
+      ).toEqual([1, 2, 3])
+    })
+
+    it('separate', async () => {
+      const { left, right } = pipe(
+        of(E.left('foo'), E.right('bar'), E.left('baz')),
+        _.separate
+      )
+      const promises = [_.toArray(left)(), _.toArray(right)()]
+
+      expect(await Promise.all(promises)).toEqual([['foo', 'baz'], ['bar']])
+    })
+
+    it('filterMap', async () => {
+      expect(
+        await pipe(
+          of<number | string>(1, 2, 'foo', 3),
+          _.filterMap(O.fromPredicate(n.isNumber)),
+          _.toArray
+        )()
+      ).toEqual([1, 2, 3])
+    })
+
+    it('filter', async () => {
+      expect(
+        await pipe(
+          of(1, 2, 3, 4, 6),
+          _.filter((n) => n % 2 === 0),
+          _.toArray
+        )()
+      ).toEqual([2, 4, 6])
+    })
+
+    it('partitionMap', async () => {
+      const { left, right } = pipe(
+        of<number | string>('foo', 2, 3, 'bar', 5),
+        _.partitionMap(E.fromPredicate(s.isString, String))
+      )
+      const promises = [_.toArray(left)(), _.toArray(right)()]
+
+      expect(await Promise.all(promises)).toEqual([
+        ['2', '3', '5'],
+        ['foo', 'bar'],
+      ])
+    })
+
+    it('partition', async () => {
+      const { left, right } = pipe(
+        of('foo', 'bar', 'foobar', 'baz', 'barbaz'),
+        _.partition((s) => s.length > 3)
+      )
+      const promises = [_.toArray(left)(), _.toArray(right)()]
+
+      expect(await Promise.all(promises)).toEqual([
+        ['foo', 'bar', 'baz'],
+        ['foobar', 'barbaz'],
+      ])
+    })
   })
 
   // -------------------------------------------------------------------------------------

@@ -1,11 +1,21 @@
-import { readonlyArray as RA, task as T } from 'fp-ts'
+import {
+  either as E,
+  option as O,
+  reader,
+  readonlyArray as RA,
+  task as T,
+} from 'fp-ts'
 import { Applicative1 } from 'fp-ts/lib/Applicative'
 import {
   apFirst as apFirst_,
   Apply1,
   apSecond as apSecond_,
+  sequenceS,
 } from 'fp-ts/lib/Apply'
 import { Chain1, chainFirst as chainFirst_ } from 'fp-ts/lib/Chain'
+import { Compactable1 } from 'fp-ts/lib/Compactable'
+import { Either } from 'fp-ts/lib/Either'
+import { Filterable1 } from 'fp-ts/lib/Filterable'
 import {
   chainFirstIOK as chainFirstIOK_,
   chainIOK as chainIOK_,
@@ -23,7 +33,11 @@ import { flap as flap_, Functor1 } from 'fp-ts/lib/Functor'
 import { Monad1 } from 'fp-ts/lib/Monad'
 import { MonadIO1 } from 'fp-ts/lib/MonadIO'
 import { MonadTask1 } from 'fp-ts/lib/MonadTask'
+import { Option } from 'fp-ts/lib/Option'
 import { Pointed1 } from 'fp-ts/lib/Pointed'
+import { Predicate } from 'fp-ts/lib/Predicate'
+import { Refinement } from 'fp-ts/lib/Refinement'
+import { Separated } from 'fp-ts/lib/Separated'
 import { Task } from 'fp-ts/lib/Task'
 import { Subject } from './internal/Subject'
 
@@ -148,6 +162,21 @@ const _apSeq: Apply1<URI>['ap'] = (fab, fa) =>
     chain((f) => pipe(fa, map(f)))
   )
 const _chain: Chain1<URI>['chain'] = (ma, f) => pipe(ma, chain(f))
+const _filter: Filterable1<URI>['filter'] = <A>(
+  fa: AsyncIter<A>,
+  predicate: Predicate<A>
+) => pipe(fa, filter(predicate))
+/* istanbul ignore next */
+const _filterMap: Filterable1<URI>['filterMap'] = (fa, f) =>
+  pipe(fa, filterMap(f))
+/* istanbul ignore next */
+const _partition: Filterable1<URI>['partition'] = <A>(
+  fa: AsyncIter<A>,
+  predicate: Predicate<A>
+) => pipe(fa, partition(predicate))
+/* istanbul ignore next */
+const _partitionMap: Filterable1<URI>['partitionMap'] = (fa, f) =>
+  pipe(fa, partitionMap(f))
 const _of = <A>(...values: A[]): AsyncIter<A> =>
   async function* () {
     for (const val of values) {
@@ -209,6 +238,81 @@ export const chain: <A, B>(
 export const flatten: <A>(mma: AsyncIter<AsyncIter<A>>) => AsyncIter<A> =
   /*#__PURE__*/
   chain(identity)
+
+/**
+ * @since 2.0.0
+ * @category Filterable
+ */
+export const filterMap: <A, B>(
+  f: (a: A) => Option<B>
+) => (fa: AsyncIter<A>) => AsyncIter<B> = (f) => (fa) =>
+  async function* () {
+    for await (const item of fa()) {
+      const optionB = f(item)
+      if (O.isSome(optionB)) {
+        yield optionB.value
+      }
+    }
+  }
+
+/**
+ * @since 2.0.0
+ * @category Filterable
+ */
+export const partitionMap =
+  <A, B, C>(f: (a: A) => Either<B, C>) =>
+  (fa: AsyncIter<A>): Separated<AsyncIter<B>, AsyncIter<C>> =>
+    pipe(
+      replay(fa),
+      map(f),
+      sequenceS(reader.Monad)({
+        left: filterMap(E.fold(O.some, () => O.none)),
+        right: filterMap(E.fold(() => O.none, O.some)),
+      })
+    )
+
+/**
+ * @since 2.0.0
+ * @category Compactable
+ */
+export const compact: Filterable1<URI>['compact'] =
+  /*#__PURE__*/
+  filterMap(identity)
+
+/**
+ * @since 2.0.0
+ * @category Compactable
+ */
+export const separate: Filterable1<URI>['separate'] =
+  /*#__PURE__*/
+  partitionMap(identity)
+
+/**
+ * @since 2.0.0
+ * @category Filterable
+ */
+export const filter: {
+  <A, B extends A>(refinement: Refinement<A, B>): (
+    iter: AsyncIter<A>
+  ) => AsyncIter<B>
+  <A>(predicate: Predicate<A>): (iter: AsyncIter<A>) => AsyncIter<A>
+} = flow(O.fromPredicate, filterMap)
+
+/**
+ * @since 2.0.0
+ * @category Filterable
+ */
+export const partition: {
+  <A, B extends A>(refinement: Refinement<A, B>): (
+    fa: AsyncIter<A>
+  ) => Separated<AsyncIter<A>, AsyncIter<B>>
+  <A>(predicate: Predicate<A>): (
+    fa: AsyncIter<A>
+  ) => Separated<AsyncIter<A>, AsyncIter<A>>
+} =
+  <A>(predicate: Predicate<A>) =>
+  (fa: AsyncIter<A>) =>
+    pipe(fa, partitionMap(E.fromPredicate(predicate, identity)))
 
 // -------------------------------------------------------------------------------------
 // instances
@@ -366,6 +470,31 @@ export const MonadTask: MonadTask1<URI> = {
   chain: _chain,
   fromIO,
   fromTask,
+}
+
+/**
+ * @since 2.7.0
+ * @category Instances
+ */
+export const Compactable: Compactable1<URI> = {
+  URI,
+  compact,
+  separate,
+}
+
+/**
+ * @since 2.7.0
+ * @category Instances
+ */
+export const Filterable: Filterable1<URI> = {
+  URI,
+  map: _map,
+  compact,
+  separate,
+  filter: _filter,
+  filterMap: _filterMap,
+  partition: _partition,
+  partitionMap: _partitionMap,
 }
 
 /**
