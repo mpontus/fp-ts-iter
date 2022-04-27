@@ -33,6 +33,7 @@ import { flap as flap_, Functor1 } from 'fp-ts/lib/Functor'
 import { Monad1 } from 'fp-ts/lib/Monad'
 import { MonadIO1 } from 'fp-ts/lib/MonadIO'
 import { MonadTask1 } from 'fp-ts/lib/MonadTask'
+import { Monoid } from 'fp-ts/lib/Monoid'
 import { Option } from 'fp-ts/lib/Option'
 import { Pointed1 } from 'fp-ts/lib/Pointed'
 import { Predicate } from 'fp-ts/lib/Predicate'
@@ -150,6 +151,107 @@ export const toArray: <A>(as: AsyncIter<A>) => Task<Array<A>> = flow(
   T.map(RA.toArray)
 )
 
+/**
+ * @since 2.0.0
+ * @category Destructors
+ */
+export const foldMap: <M>(
+  M: Monoid<M>
+) => <A>(f: (a: A) => M) => (fa: AsyncIter<A>) => Task<M> =
+  (M) => (f) => (fa) => async () => {
+    let result = M.empty
+    for await (const a of fa()) {
+      result = M.concat(result, f(a))
+    }
+    return result
+  }
+
+/**
+ * @since 2.0.0
+ * @category Destructors
+ */
+export const reduce: <A, B>(
+  b: B,
+  f: (b: B, a: A) => B
+) => (fa: AsyncIter<A>) => Task<B> = (b, f) => (fa) => async () => {
+  for await (const a of fa()) {
+    b = f(b, a)
+  }
+  return b
+}
+
+// -------------------------------------------------------------------------------------
+// combinators
+// -------------------------------------------------------------------------------------
+
+/*
+ * @category combinators
+ * @since 2.0.0
+ */
+export const scan: <A, B>(
+  b: B,
+  f: (b: B, a: A) => B
+) => (iter: AsyncIter<A>) => AsyncIter<B> = (b, f) => (iter) =>
+  async function* () {
+    for await (const a of iter()) {
+      yield (b = f(b, a))
+    }
+  }
+
+/// See https://stackoverflow.com/a/50586391/326574
+async function* _concat<A>(iterables: AsyncIterable<A>[]): AsyncIterable<A> {
+  const asyncIterators = Array.from(iterables, (o) => o[Symbol.asyncIterator]())
+  const results = []
+  let count = asyncIterators.length
+
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const never = new Promise<never>(() => {})
+  function getNext(asyncIterator: AsyncIterator<A>, index: number) {
+    return asyncIterator.next().then((result) => ({
+      index,
+      result,
+    }))
+  }
+  const nextPromises = asyncIterators.map(getNext)
+  try {
+    while (count) {
+      const { index, result } = await Promise.race(nextPromises)
+      if (result.done) {
+        nextPromises[index] = never
+        results[index] = result.value
+        count--
+      } else {
+        nextPromises[index] = getNext(asyncIterators[index], index)
+        yield result.value
+      }
+    }
+  } finally {
+    for (const [index, iterator] of asyncIterators.entries())
+      if (nextPromises[index] != never && iterator.return != null)
+        iterator.return()
+    // no await here - see https://github.com/tc39/proposal-async-iteration/issues/126
+  }
+  return results
+}
+
+/**
+ * @since 2.11.0
+ * @category Combinators
+ */
+export const concatW =
+  <B>(second: AsyncIter<B>) =>
+  <A>(first: AsyncIter<A>): AsyncIter<B | A> =>
+  () =>
+    _concat<A | B>([first(), second()])
+
+/**
+ * @since 2.11.0
+ * @category Combinators
+ */
+export const concat: <A>(
+  second: AsyncIter<A>
+) => (first: AsyncIter<A>) => AsyncIter<A> = concatW
+
 // -------------------------------------------------------------------------------------
 // non-pipeables
 // -------------------------------------------------------------------------------------
@@ -177,12 +279,6 @@ const _partition: Filterable1<URI>['partition'] = <A>(
 /* istanbul ignore next */
 const _partitionMap: Filterable1<URI>['partitionMap'] = (fa, f) =>
   pipe(fa, partitionMap(f))
-const _of = <A>(...values: A[]): AsyncIter<A> =>
-  async function* () {
-    for (const val of values) {
-      yield val
-    }
-  }
 
 // -------------------------------------------------------------------------------------
 // type class members
@@ -214,7 +310,10 @@ export const ap: <A>(
  * @since 2.0.0
  * @category Pointed
  */
-export const of: Pointed1<URI>['of'] = _of
+export const of: Pointed1<URI>['of'] = (a) =>
+  async function* () {
+    yield a
+  }
 
 /**
  * @since 0.1.0

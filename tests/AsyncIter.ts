@@ -75,6 +75,37 @@ describe('AsyncIter', () => {
     )
   })
 
+  it('scan', async () => {
+    expect(
+      await pipe(
+        of(1, 2, 3),
+        _.scan(0, (a, b) => a + b),
+        _.toArray
+      )()
+    ).toEqual([1, 3, 6])
+  })
+
+  it('foldMap', async () => {
+    expect(
+      await pipe(of(100, 200, 300), _.foldMap(s.Monoid)(String))()
+    ).toEqual('100200300')
+  })
+
+  it('reduce', async () => {
+    expect(
+      await pipe(
+        of(2, 3, 4),
+        _.reduce(5, (a, b) => a * b)
+      )()
+    ).toEqual(120)
+  })
+
+  it('concat', async () => {
+    expect(await pipe(of(1, 2), _.concat(of(3, 4)), _.toArray)()).toEqual([
+      1, 2, 3, 4,
+    ])
+  })
+
   it('fromIO', async () => {
     expect(
       await pipe(
@@ -109,15 +140,17 @@ describe('AsyncIter', () => {
     })
 
     test('fromAsyncIterableK', async () => {
-      const gen = async function* (m: number) {
-        yield 1 * m
-        yield 2 * m
-        yield 3 * m
-      }
-
-      expect(await pipe(2, _.fromAsyncIterableK(gen), _.toArray)()).toEqual([
-        2, 4, 6,
-      ])
+      expect(
+        await pipe(
+          2,
+          _.fromAsyncIterableK(async function* (m: number) {
+            yield 1 * m
+            yield 2 * m
+            yield 3 * m
+          }),
+          _.toArray
+        )()
+      ).toEqual([2, 4, 6])
     })
   })
 
