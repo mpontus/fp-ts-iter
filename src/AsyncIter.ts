@@ -38,8 +38,10 @@ import { Option } from 'fp-ts/lib/Option'
 import { Pointed1 } from 'fp-ts/lib/Pointed'
 import { Predicate } from 'fp-ts/lib/Predicate'
 import { Refinement } from 'fp-ts/lib/Refinement'
+import { Semigroup } from 'fp-ts/lib/Semigroup'
 import { Separated } from 'fp-ts/lib/Separated'
 import { Task } from 'fp-ts/lib/Task'
+import { Deferred } from './internal/Deferred'
 import { Subject } from './internal/Subject'
 
 // -------------------------------------------------------------------------------------
@@ -198,6 +200,7 @@ export const scan: <A, B>(
     }
   }
 
+/** @internal */
 /// See https://stackoverflow.com/a/50586391/326574
 async function* _concat<A>(iterables: AsyncIterable<A>[]): AsyncIterable<A> {
   const asyncIterators = Array.from(iterables, (o) => o[Symbol.asyncIterator]())
@@ -257,12 +260,7 @@ export const concat: <A>(
 // -------------------------------------------------------------------------------------
 
 const _map: Functor1<URI>['map'] = (fa, f) => pipe(fa, map(f))
-const _apPar: Apply1<URI>['ap'] = (fab, fa) => pipe(fab, ap(fa))
-const _apSeq: Apply1<URI>['ap'] = (fab, fa) =>
-  pipe(
-    fab,
-    chain((f) => pipe(fa, map(f)))
-  )
+const _ap: Apply1<URI>['ap'] = (fab, fa) => pipe(fab, ap(fa))
 const _chain: Chain1<URI>['chain'] = (ma, f) => pipe(ma, chain(f))
 const _filter: Filterable1<URI>['filter'] = <A>(
   fa: AsyncIter<A>,
@@ -279,6 +277,14 @@ const _partition: Filterable1<URI>['partition'] = <A>(
 /* istanbul ignore next */
 const _partitionMap: Filterable1<URI>['partitionMap'] = (fa, f) =>
   pipe(fa, partitionMap(f))
+const _apC =
+  (concurrency: number): Apply1<URI>['ap'] =>
+  (fab, fa) =>
+    apC(concurrency)(fa)(fab)
+const _chainC =
+  (concurrency: number): Chain1<URI>['chain'] =>
+  (fa, f) =>
+    chainC(concurrency)(f)(fa)
 
 // -------------------------------------------------------------------------------------
 // type class members
@@ -307,6 +313,19 @@ export const ap: <A>(
   chain((f) => pipe(fa, map(f)))
 
 /**
+ * @since 2.10.0
+ * @category Instances
+ */
+export const apC =
+  (concurrency: number) =>
+  <A>(fa: AsyncIter<A>) =>
+  <B>(fab: AsyncIter<(a: A) => B>): AsyncIter<B> =>
+    pipe(
+      fab,
+      chainC(concurrency)((f) => pipe(fa, map(f)))
+    )
+
+/**
  * @since 2.0.0
  * @category Pointed
  */
@@ -328,6 +347,65 @@ export const chain: <A, B>(
         yield j
       }
     }
+  }
+
+/**
+ * @since 0.1.0
+ * @category Monad
+ */
+export const chainC =
+  (concurrency: number) =>
+  <A, B>(f: (a: A) => AsyncIter<B>) =>
+  (fa: AsyncIter<A>): AsyncIter<B> =>
+  () => {
+    const iterator = fa()[Symbol.asyncIterator]()
+    const subject = new Subject<B>()
+    let deferred = new Deferred<void>()
+    let running = 0
+    let isComplete = false
+
+    async function exhaust(iter: AsyncIter<B>): Promise<void> {
+      for await (const b of iter()) {
+        subject.onNext(b)
+      }
+    }
+
+    async function process(
+      cb: (result: IteratorResult<A>) => Promise<void>
+    ): Promise<void> {
+      while (!isComplete) {
+        await cb(await iterator.next())
+      }
+    }
+
+    process((result) => {
+      if (result.done) {
+        isComplete = true
+
+        if (running == 0) {
+          subject.onReturn()
+        }
+      } else {
+        if (++running >= concurrency) {
+          deferred = new Deferred()
+        }
+
+        exhaust(f(result.value)).then(() => {
+          if (--running < concurrency) {
+            deferred.onResolve()
+          }
+          if (isComplete && running == 0) {
+            subject.onReturn()
+          }
+        })
+      }
+
+      return Promise.resolve(deferred)
+    })
+
+    deferred.onResolve()
+
+    return subject
   }
 
 /**
@@ -408,10 +486,8 @@ export const partition: {
   <A>(predicate: Predicate<A>): (
     fa: AsyncIter<A>
   ) => Separated<AsyncIter<A>, AsyncIter<A>>
-} =
-  <A>(predicate: Predicate<A>) =>
-  (fa: AsyncIter<A>) =>
-    pipe(fa, partitionMap(E.fromPredicate(predicate, identity)))
+} = <A>(predicate: Predicate<A>) =>
+  partitionMap(E.fromPredicate(predicate, identity))
 
 // -------------------------------------------------------------------------------------
 // instances
@@ -434,6 +510,24 @@ declare module 'fp-ts/lib/HKT' {
     readonly [URI]: AsyncIter<A>
   }
 }
+
+/**
+ * @since 2.7.0
+ * @category Instances
+ */
+export const getSemigroup = <A = never>(): Semigroup<AsyncIter<A>> => ({
+  concat: (first, second) => pipe(first, concat(second)),
+})
+
+/**
+ * @since 2.7.0
+ * @category Instances
+ */
+export const getMonoid = <A = never>(): Monoid<AsyncIter<A>> => ({
+  ...getSemigroup<A>(),
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  empty: async function* () {},
+})
 
 /**
  * @since 2.7.0
@@ -467,10 +561,10 @@ export const Pointed: Pointed1<URI> = {
  * @since 2.10.0
  * @category Instances
  */
-export const ApplyPar: Apply1<URI> = {
+export const Apply: Apply1<URI> = {
   URI,
   map: _map,
-  ap: _apPar,
+  ap: _ap,
 }
 
 /**
@@ -479,7 +573,7 @@ export const ApplyPar: Apply1<URI> = {
  */
 export const apFirst =
   /*#__PURE__*/
-  apFirst_(ApplyPar)
+  apFirst_(Apply)
 
 /**
  * @since 2.0.0
@@ -487,16 +581,42 @@ export const apFirst =
  */
 export const apSecond =
   /*#__PURE__*/
-  apSecond_(ApplyPar)
+  apSecond_(Apply)
+
+/**
+ * @since 2.10.0
+ * @category Instances
+ */
+export const getApplyC = (concurrency: number): Apply1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apC(concurrency),
+})
+
+/**
+ * @since 2.0.0
+ * @category Combinators
+ */
+export const apFirstC = (concurrency: number): typeof apFirst =>
+  /*#__PURE__*/
+  apFirst_(getApplyC(concurrency))
+
+/**
+ * @since 2.0.0
+ * @category Combinators
+ */
+export const apSecondC = (concurrency: number): typeof apSecond =>
+  /*#__PURE__*/
+  apSecond_(getApplyC(concurrency))
 
 /**
  * @since 2.7.0
  * @category Instances
  */
-export const ApplicativePar: Applicative1<URI> = {
+export const Applicative: Applicative1<URI> = {
   URI,
   map: _map,
-  ap: _apPar,
+  ap: _ap,
   of,
 }
 
@@ -504,22 +624,12 @@ export const ApplicativePar: Applicative1<URI> = {
  * @since 2.10.0
  * @category Instances
  */
-export const ApplySeq: Apply1<URI> = {
+export const getApplicativeC = (concurrency: number): Applicative1<URI> => ({
   URI,
   map: _map,
-  ap: _apSeq,
-}
-
-/**
- * @since 2.7.0
- * @category Instances
- */
-export const ApplicativeSeq: Applicative1<URI> = {
-  URI,
-  map: _map,
-  ap: _apSeq,
+  ap: _apC(concurrency),
   of,
-}
+})
 
 /**
  * @since 2.10.0
@@ -528,9 +638,27 @@ export const ApplicativeSeq: Applicative1<URI> = {
 export const Chain: Chain1<URI> = {
   URI,
   map: _map,
-  ap: _apPar,
+  ap: _ap,
   chain: _chain,
 }
+
+/**
+ * @since 2.10.0
+ * @category Instances
+ */
+export const getChainC = (concurrency: number): Chain1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apC(concurrency),
+  chain: _chainC(concurrency),
+})
+
+/**
+ * @since 2.0.0
+ * @category Combinators
+ */
+export const chainFirstC = (concurrency: number): typeof chainFirst =>
+  chainFirst_(getChainC(concurrency))
 
 /**
  * @since 2.10.0
@@ -540,9 +668,21 @@ export const Monad: Monad1<URI> = {
   URI,
   map: _map,
   of,
-  ap: _apPar,
+  ap: _ap,
   chain: _chain,
 }
+
+/**
+ * @since 2.10.0
+ * @category Instances
+ */
+export const getMonadC = (concurrency: number): Monad1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apC(concurrency),
+  chain: _chainC(concurrency),
+  of,
+})
 
 /**
  * @since 2.10.0
@@ -552,10 +692,23 @@ export const MonadIO: MonadIO1<URI> = {
   URI,
   map: _map,
   of,
-  ap: _apPar,
+  ap: _ap,
   chain: _chain,
   fromIO,
 }
+
+/**
+ * @since 2.10.0
+ * @category Instances
+ */
+export const getConcurrentMonadIO = (concurrency: number): MonadIO1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apC(concurrency),
+  chain: _chainC(concurrency),
+  of,
+  fromIO,
+})
 
 /**
  * @since 2.10.0
@@ -565,11 +718,25 @@ export const MonadTask: MonadTask1<URI> = {
   URI,
   map: _map,
   of,
-  ap: _apPar,
+  ap: _ap,
   chain: _chain,
   fromIO,
   fromTask,
 }
+
+/**
+ * @since 2.10.0
+ * @category Instances
+ */
+export const getMonadTaskC = (concurrency: number): MonadTask1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apC(concurrency),
+  chain: _chainC(concurrency),
+  of,
+  fromIO,
+  fromTask,
+})
 
 /**
  * @since 2.7.0

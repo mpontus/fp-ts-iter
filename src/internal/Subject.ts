@@ -1,26 +1,9 @@
-import { hole } from 'fp-ts/lib/function'
-
-class PromiseSubject<T> implements PromiseLike<T> {
-  resolve: (value: T | PromiseLike<T>) => void = hole
-  reject: (reason?: unknown) => void = hole
-
-  private readonly promise = new Promise<T>((resolve, reject) => {
-    this.resolve = resolve
-    this.reject = reject
-  })
-
-  then<TResult1 = T, TResult2 = never>(
-    onFulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
-    onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
-  ): PromiseLike<TResult1 | TResult2> {
-    return this.promise.then(onFulfilled, onRejected)
-  }
-}
+import { Deferred } from './Deferred'
 
 class ReadonlySubject<T> implements AsyncIterableIterator<T> {
   private done?: boolean
   // private result?: Promise<IteratorReturnResult<unknown>>
-  private pending: Array<PromiseSubject<IteratorResult<T>>> = []
+  private pending: Array<Deferred<IteratorResult<T>>> = []
   private queue: Array<Promise<IteratorResult<T>>> = []
 
   onNext(value: T): void {
@@ -28,7 +11,7 @@ class ReadonlySubject<T> implements AsyncIterableIterator<T> {
       return
     } else if (this.pending.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.pending.pop()!.resolve({ value, done: false })
+      this.pending.pop()!.onResolve({ value, done: false })
     } else {
       this.queue.push(Promise.resolve({ value, done: false }))
     }
@@ -39,14 +22,14 @@ class ReadonlySubject<T> implements AsyncIterableIterator<T> {
       return
     } else if (this.pending.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.pending.pop()!.resolve({ value, done: true })
+      this.pending.pop()!.onResolve({ value, done: true })
     } else {
       this.queue.push(Promise.resolve({ value, done: true }))
     }
 
     while (this.pending.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.pending.pop()!.resolve({
+      this.pending.pop()!.onResolve({
         done: true,
         value: undefined,
       })
@@ -60,14 +43,14 @@ class ReadonlySubject<T> implements AsyncIterableIterator<T> {
       return
     } else if (this.pending.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.pending.pop()!.reject(reason)
+      this.pending.pop()!.onReject(reason)
     } else {
       this.queue.push(Promise.reject(reason))
     }
 
     while (this.pending.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.pending.pop()!.resolve({
+      this.pending.pop()!.onResolve({
         done: true,
         value: undefined,
       })
@@ -89,7 +72,7 @@ class ReadonlySubject<T> implements AsyncIterableIterator<T> {
       })
     }
 
-    this.pending.unshift(new PromiseSubject())
+    this.pending.unshift(new Deferred())
     return Promise.resolve(this.pending[0])
   }
 
