@@ -361,6 +361,39 @@ describe('AsyncIter', () => {
 
   describe('concurrent', () => {
     describe('Apply', () => {
+      test('apC', async () => {
+        const apSecond = _.apSecondC(2)
+        expect(
+          await pipe(
+            of(
+              (a: number) => a + 2,
+              (a: number) => a * 2
+            ),
+            _.apC(2)(async function* () {
+              await delay(100)
+              yield 1
+              await delay(100)
+              yield 2
+            }),
+            _.toArray
+          )()
+        ).toEqual([3, 2, 4, 4])
+      })
+
+      test('apSecondC', async () => {
+        expect(
+          await pipe(
+            of(1, 2, 3),
+            _.apSecondC(2)(async function* () {
+              yield 'a'
+              await delay(100)
+              yield 'b'
+            }),
+            _.toArray
+          )()
+        ).toEqual([1, 2, 3, 1, 2, 3])
+      })
+
       test('apSecondC', async () => {
         const apSecond = _.apSecondC(2)
         expect(
@@ -378,14 +411,14 @@ describe('AsyncIter', () => {
     })
     describe('Chain', () => {
       test('chainC', async () => {
-        const chain = _.chainC(2)
         expect(
           await pipe(
             of(1, 2, 3),
-            chain(
+            _.chainC(2)(
               _.fromAsyncIterableK(async function* () {
+                await delay(100)
                 yield 'a'
-                await delay(1000)
+                await delay(100)
                 yield 'b'
               })
             ),
@@ -395,12 +428,12 @@ describe('AsyncIter', () => {
       })
 
       test('chainFirstC', async () => {
-        const chainFirst = _.chainFirstC(5)
         expect(
           await pipe(
-            of(1, 2),
-            chainFirst(
+            of(1, 2, 3),
+            _.chainFirstC(2)(
               _.fromAsyncIterableK(async function* () {
+                await delay(100)
                 yield 'a'
                 await delay(100)
                 yield 'b'
@@ -408,7 +441,7 @@ describe('AsyncIter', () => {
             ),
             _.toArray
           )()
-        ).toEqual(['a', 'a', 'b', 'b'])
+        ).toEqual([1, 2, 1, 2, 3, 3])
       })
     })
   })
@@ -448,9 +481,5 @@ describe('AsyncIter', () => {
       ])
       expect(generator).toHaveBeenCalledTimes(1)
     })
-  })
-
-  describe('getConcurrentChain', () => {
-    const Chain = _.getChainC(5)
   })
 })

@@ -683,6 +683,14 @@ export const Chain: Chain1<URI> = {
 }
 
 /**
+ * @since 2.0.0
+ * @category Combinators
+ */
+export const chainFirst =
+  /*#__PURE__*/
+  chainFirst_(Chain)
+
+/**
  * @since 2.10.0
  * @category Instances
  */
@@ -693,11 +701,8 @@ export const getChainC = (concurrency: number): Chain1<URI> => ({
   chain: _chainC(concurrency),
 })
 
-/**
- * @since 2.0.0
- * @category Combinators
- */
-export const chainFirstC = (concurrency: number): typeof chainFirst =>
+/** @category Combinators */
+export const chainFirstC = (concurrency: number) =>
   chainFirst_(getChainC(concurrency))
 
 /**
@@ -741,7 +746,7 @@ export const MonadIO: MonadIO1<URI> = {
  * @since 2.10.0
  * @category Instances
  */
-export const getConcurrentMonadIO = (concurrency: number): MonadIO1<URI> => ({
+export const getMonadIOC = (concurrency: number): MonadIO1<URI> => ({
   URI,
   map: _map,
   ap: _apC(concurrency),
@@ -844,14 +849,6 @@ export const Filterable: Filterable1<URI> = {
 }
 
 /**
- * @since 2.0.0
- * @category Combinators
- */
-export const chainFirst =
-  /*#__PURE__*/
-  chainFirst_(Chain)
-
-/**
  * @since 2.10.0
  * @category Instances
  */
@@ -925,7 +922,7 @@ export const chainFirstTaskK =
 /**
  * Replay emitted values for each subscriber
  *
- * @since 0.1.0
+ * @category Combinators
  */
 export function replay<A>(iter: AsyncIter<A>): AsyncIter<A> {
   let subject: Subject<A>
