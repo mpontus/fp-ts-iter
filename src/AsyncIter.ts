@@ -5,6 +5,8 @@ import {
   readonlyArray as RA,
   task as T,
 } from 'fp-ts'
+import { Alt1 } from 'fp-ts/lib/Alt'
+import { Alternative1 } from 'fp-ts/lib/Alternative'
 import { Applicative1 } from 'fp-ts/lib/Applicative'
 import {
   apFirst as apFirst_,
@@ -28,7 +30,7 @@ import {
   FromTask1,
   fromTaskK as fromTaskK_,
 } from 'fp-ts/lib/FromTask'
-import { flow, identity, pipe } from 'fp-ts/lib/function'
+import { flow, identity, Lazy, pipe } from 'fp-ts/lib/function'
 import { flap as flap_, Functor1 } from 'fp-ts/lib/Functor'
 import { Monad1 } from 'fp-ts/lib/Monad'
 import { MonadIO1 } from 'fp-ts/lib/MonadIO'
@@ -41,6 +43,7 @@ import { Refinement } from 'fp-ts/lib/Refinement'
 import { Semigroup } from 'fp-ts/lib/Semigroup'
 import { Separated } from 'fp-ts/lib/Separated'
 import { Task } from 'fp-ts/lib/Task'
+import { guard as guard_, Zero1 } from 'fp-ts/lib/Zero'
 import { Deferred } from './internal/Deferred'
 import { Subject } from './internal/Subject'
 
@@ -277,6 +280,7 @@ const _partition: Filterable1<URI>['partition'] = <A>(
 /* istanbul ignore next */
 const _partitionMap: Filterable1<URI>['partitionMap'] = (fa, f) =>
   pipe(fa, partitionMap(f))
+const _alt: Alt1<URI>['alt'] = (fa, that) => pipe(fa, alt(that))
 const _apC =
   (concurrency: number): Apply1<URI>['ap'] =>
   (fab, fa) =>
@@ -289,6 +293,18 @@ const _chainC =
 // -------------------------------------------------------------------------------------
 // type class members
 // -------------------------------------------------------------------------------------
+
+/**
+ * @since 2.0.0
+ * @category Pointed
+ */
+export const of: Pointed1<URI>['of'] = flow(RA.of, fromIterable)
+
+/**
+ * @since 2.7.0
+ * @category Zero
+ */
+export const zero: Zero1<URI>['zero'] = () => fromIterable([])
 
 /**
  * @since 0.1.0
@@ -326,15 +342,6 @@ export const apC =
     )
 
 /**
- * @since 2.0.0
- * @category Pointed
- */
-export const of: Pointed1<URI>['of'] = (a) =>
-  async function* () {
-    yield a
-  }
-
-/**
  * @since 0.1.0
  * @category Monad
  */
@@ -356,52 +363,43 @@ export const chain: <A, B>(
 export const chainC =
   (concurrency: number) =>
   <A, B>(f: (a: A) => AsyncIter<B>) =>
-  (fa: AsyncIter<A>): AsyncIter<B> =>
+  (ma: AsyncIter<A>): AsyncIter<B> =>
   () => {
-    const iterator = fa()[Symbol.asyncIterator]()
     const subject = new Subject<B>()
     let deferred = new Deferred<void>()
     let running = 0
     let isComplete = false
+    ;(async () => {
+      for await (const a of ma()) {
+        const mb = f(a)
 
-    async function exhaust(iter: AsyncIter<B>): Promise<void> {
-      for await (const b of iter()) {
-        subject.onNext(b)
-      }
-    }
-
-    async function process(
-      cb: (result: IteratorResult<A>) => Promise<void>
-    ): Promise<void> {
-      while (!isComplete) {
-        await cb(await iterator.next())
-      }
-    }
-
-    process((result) => {
-      if (result.done) {
-        isComplete = true
-
-        if (running == 0) {
-          subject.onReturn()
-        }
-      } else {
         if (++running >= concurrency) {
           deferred = new Deferred()
         }
 
-        exhaust(f(result.value)).then(() => {
+        ;(async () => {
+          for await (const b of mb()) {
+            subject.onNext(b)
+          }
+
           if (--running < concurrency) {
             deferred.onResolve()
           }
+
           if (isComplete && running == 0) {
             subject.onReturn()
           }
-        })
+        })()
+
+        await deferred
       }
 
-      return Promise.resolve(deferred)
-    })
+      if (running == 0) {
+        subject.onReturn()
+      }
+
+      isComplete = true
+    })()
 
     deferred.onResolve()
 
@@ -488,6 +486,48 @@ export const partition: {
   ) => Separated<AsyncIter<A>, AsyncIter<A>>
 } = <A>(predicate: Predicate<A>) =>
   partitionMap(E.fromPredicate(predicate, identity))
+
+/**
+ * @category Alt
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { fromIterable, altW, toArray } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       fromIterable([1, 2, 3]),
+ *       altW(() => fromIterable(['a', 'b', 'c'])),
+ *       toArray
+ *     )(),
+ *     [1, 2, 3, 'a', 'b', 'c']
+ *   )
+ */
+export const altW =
+  <B>(that: Lazy<AsyncIter<B>>) =>
+  <A>(fa: AsyncIter<A>): AsyncIter<A | B> =>
+    async function* () {
+      yield* fa()
+      yield* that()()
+    }
+
+/**
+ * @category Alt
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { fromIterable, alt, toArray } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       fromIterable([1, 2, 3]),
+ *       alt(() => fromIterable([4, 5, 6])),
+ *       toArray
+ *     )(),
+ *     [1, 2, 3, 4, 5, 6]
+ *   )
+ */
+export const alt: <A>(
+  that: Lazy<AsyncIter<A>>
+) => (fa: AsyncIter<A>) => AsyncIter<A> = altW
 
 // -------------------------------------------------------------------------------------
 // instances
@@ -737,6 +777,46 @@ export const getMonadTaskC = (concurrency: number): MonadTask1<URI> => ({
   fromIO,
   fromTask,
 })
+
+/**
+ * @since 2.7.0
+ * @category Instances
+ */
+export const Alt: Alt1<URI> = {
+  URI,
+  map: _map,
+  alt: _alt,
+}
+
+/**
+ * @since 2.11.0
+ * @category Instances
+ */
+export const Zero: Zero1<URI> = {
+  URI,
+  zero,
+}
+
+/**
+ * @since 2.11.0
+ * @category Constructors
+ */
+export const guard =
+  /*#__PURE__*/
+  guard_(Zero, Pointed)
+
+/**
+ * @since 2.7.0
+ * @category Instances
+ */
+export const Alternative: Alternative1<URI> = {
+  URI,
+  map: _map,
+  ap: _ap,
+  of,
+  alt: _alt,
+  zero,
+}
 
 /**
  * @since 2.7.0

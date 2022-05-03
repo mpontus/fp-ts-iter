@@ -150,23 +150,80 @@ describe('AsyncIter', () => {
     ).toEqual(120)
   })
 
-  describe('Semigroup', () => {
-    it('concat', async () => {
-      expect(await pipe(of(1, 2), _.concat(of(3, 4)), _.toArray)()).toEqual([
-        1, 2, 3, 4,
-      ])
-
+  describe('Alt', () => {
+    it('alt', async () => {
       expect(
         await pipe(
           async function* () {
-            await delay(100)
             yield 1
+            await delay(100)
             yield 2
           },
-          _.concatW(of(3, 4)),
+          _.alt<number>(
+            _.fromAsyncIterableK(async function* () {
+              yield 3
+              await delay(100)
+              yield 4
+            })
+          ),
           _.toArray
         )()
-      ).toEqual([3, 4, 1, 2])
+      ).toEqual([1, 2, 3, 4])
+    })
+    it('altW', async () => {
+      expect(
+        await pipe(
+          async function* () {
+            yield 1
+            await delay(100)
+            yield 2
+          },
+          _.altW(
+            _.fromAsyncIterableK(async function* () {
+              yield 'a'
+              await delay(100)
+              yield 'b'
+            })
+          ),
+          _.toArray
+        )()
+      ).toEqual([1, 2, 'a', 'b'])
+    })
+  })
+  describe('Semigroup', () => {
+    it('concat', async () => {
+      expect(
+        await pipe(
+          async function* () {
+            yield 1
+            await delay(100)
+            yield 2
+          },
+          _.concat<number>(async function* () {
+            yield 3
+            await delay(100)
+            yield 4
+          }),
+          _.toArray
+        )()
+      ).toEqual([1, 3, 2, 4])
+    })
+    it('concatW', async () => {
+      expect(
+        await pipe(
+          async function* () {
+            yield 1
+            await delay(100)
+            yield 2
+          },
+          _.concatW(async function* () {
+            yield 'a'
+            await delay(100)
+            yield 'b'
+          }),
+          _.toArray
+        )()
+      ).toEqual([1, 'a', 2, 'b'])
     })
   })
 
