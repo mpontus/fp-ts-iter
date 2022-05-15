@@ -77,7 +77,7 @@ export interface AsyncIter<A> {
 // -------------------------------------------------------------------------------------
 
 /**
- * Return an `AsyncIter` which yields only the value of the given `IO`.
+ * Return an `AsyncIter` which yields only the value of the provided `IO`.
  *
  * @since 0.1.0
  * @category Natural transformations
@@ -88,7 +88,7 @@ export const fromIO: FromIO1<URI>['fromIO'] = (ma) =>
   }
 
 /**
- * Return an `AsyncIter` which yields only the value of the given `Task`.
+ * Return an `AsyncIter` which yields only the value of the provided `Task`.
  *
  * @since 0.1.0
  * @category FromTask
@@ -103,8 +103,8 @@ export const fromTask: FromTask1<URI>['fromTask'] = (ma) =>
 // -------------------------------------------------------------------------------------
 
 /**
- * Returns a constructor, that passes its arguments to the given `Iterable`
- * constructor and returns an `AsyncIter` that yields the same elements.
+ * Returns a function that passes its arguments to the provided constructor and
+ * returns an `AsyncIter` that yields the elements from the resulting `Iterable`.
  *
  * @since 0.1.0
  * @category Constructors
@@ -121,7 +121,7 @@ export const fromIterableK: <A extends ReadonlyArray<unknown>, B>(
     }
 
 /**
- * Returns an `AsyncIter` that yields the elements of the given `Iterable`.
+ * Returns an `AsyncIter` that yields the elements of the provided `Iterable`.
  *
  * @since 0.1.0
  * @category Constructors
@@ -130,8 +130,8 @@ export const fromIterable: <A>(iter: Iterable<A>) => AsyncIter<A> =
   fromIterableK(identity)
 
 /**
- * Returns a constructor, that passes its arguments to the given `AsyncIterable`
- * constructor and returns an `AsyncIter` that yields the same elements.
+ * Returns a function that passes its arguments to the provided constructor and
+ * returns an `AsyncIter` that yields the elements from the resulting `AsyncIterable`.
  *
  * @since 0.1.0
  * @category Constructors
@@ -148,7 +148,7 @@ export const fromAsyncIterableK: <A extends ReadonlyArray<unknown>, B>(
     }
 
 /**
- * Returns an `AsyncIter` that yields the elements of the given `AsyncIterable`.
+ * Returns an `AsyncIter` that yields the elements of the provided `AsyncIterable`.
  *
  * @since 0.1.0
  * @category Constructors
@@ -161,7 +161,7 @@ export const fromAsyncIterable: <A>(iter: AsyncIterable<A>) => AsyncIter<A> =
 // -------------------------------------------------------------------------------------
 
 /**
- * Returns a `Task` of readonly array containing the elements of the given `AsyncIter`.
+ * Returns a `Task` of readonly array containing the elements of the provided `AsyncIter`.
  *
  * @since 0.1.0
  * @category Destructors
@@ -176,7 +176,7 @@ export const toReadonlyArray: <A>(
   return result
 }
 /**
- * Returns a `Task` of array containing the elements of the given `AsyncIter`.
+ * Returns a `Task` of array containing the elements of the provided `AsyncIter`.
  *
  * @since 0.1.0
  * @category Destructors
@@ -187,9 +187,8 @@ export const toArray: <A>(as: AsyncIter<A>) => Task<Array<A>> = flow(
 )
 
 /**
- * Returns a `Task` of value produced by applying the given function to the
- * elements of the given `AsyncIter` and concatenating the results using the
- * given monoid.
+ * Returns a `Task` containing the combined value produced by applying the
+ * function to the elements of the `AsyncIter`.
  *
  * @since 0.1.0
  * @category Destructors
@@ -206,9 +205,9 @@ export const foldMap: <M>(
   }
 
 /**
- * Returns a `Task` containing last value produced by applying the given
- * function to each element of the given `AsyncIter`, passing it the result of
- * the previous call and starting with the initial value.
+ * Returns a `Task` containing the last value produced by applying the function
+ * to each element of the `AsyncIter`, passing it the result of the previous
+ * call, starting with the initial value.
  *
  * @since 0.1.0
  * @category Destructors
@@ -228,9 +227,9 @@ export const reduce: <A, B>(
 // -------------------------------------------------------------------------------------
 
 /**
- * Returns an `AsyncIter` that yields the values produced by applying the given
- * function to the elements of the given `AsyncIter`, passing it the result of
- * the previous call and starting with the initial value.
+ * Returns an `AsyncIter` that yields the values produced by applying the
+ * function to the elements of the `AsyncIter`, passing it the result of the
+ * previous call, starting with the initial value.
  *
  * @since 0.1.0
  * @category Combinators
@@ -246,7 +245,7 @@ export const scan: <A, B>(
   }
 
 /**
- * Merge `AsyncIterable`s into a single `AsyncIterable`
+ * Merge multiple `AsyncIterable`s into a single `AsyncIterable`
  *
  * @internal
  */
@@ -287,10 +286,7 @@ async function* _concat<A>(iterables: AsyncIterable<A>[]): AsyncIterable<A> {
 }
 
 /**
- * Returns an `AsyncIter` that yields the values from both given `AsyncIter`s.
- *
- * This function subscribes to both `AsyncIter`s and yields their values in
- * parallel. Use `altW` if you want to concatenate their values sequentially.
+ * Returns an `AsyncIter` that combines the values of both provided `AsyncIter`s.
  *
  * @since 0.1.0
  * @category Combinators
@@ -302,10 +298,7 @@ export const concatW =
     _concat<A | B>([first(), second()])
 
 /**
- * Returns an `AsyncIter` that yields the values from both given `AsyncIter`s.
- *
- * This function subscribes to both `AsyncIter`s and yields their values in
- * parallel. Use `altW` if you want to concatenate their values sequentially.
+ * Returns an `AsyncIter` that combines the values of both provided `AsyncIter`s.
  *
  * @since 0.1.0
  * @category Combinators
@@ -343,7 +336,7 @@ const _alt: Alt1<URI>['alt'] = (fa, that) => pipe(fa, alt(that))
 // -------------------------------------------------------------------------------------
 
 /**
- * Returns an `AsyncIter` containing only a given element.
+ * Returns an `AsyncIter` containing only the provided value.
  *
  * @since 0.1.0
  * @category Pointed
@@ -359,8 +352,8 @@ export const of: Pointed1<URI>['of'] = flow(RA.of, fromIterable)
 export const zero: Zero1<URI>['zero'] = () => fromIterable([])
 
 /**
- * Returns an `AsyncIter` that yields the results of applying a given function
- * to the elements of the first `AsyncIter`.
+ * Returns an `AsyncIter` that yields the results of applying the function to
+ * the elements of the first `AsyncIter`.
  *
  * @since 0.1.0
  * @category Functor
@@ -388,7 +381,7 @@ export const ap: <A>(
 
 /**
  * Returns an `AsyncIter` that yields the elements of each `AsyncIter` produced
- * by applying a given function to the elements of the first `AsyncIter`.
+ * by applying the function to the elements of the first `AsyncIter`.
  *
  * @since 0.1.0
  * @category Monad
@@ -434,7 +427,7 @@ export const filterMap: <A, B>(
   }
 
 /**
- * Separate the elements of an `AsyncIter` into two `AsyncIter`s according to a
+ * Separate elements of an `AsyncIter` into two `AsyncIter`s according to a
  * mapping function.
  *
  * @since 0.1.0
@@ -453,7 +446,7 @@ export const partitionMap =
     )
 
 /**
- * Omit the elements of an `AsyncIter` that fail to satisfy a predicate.
+ * Omit elements of an `AsyncIter` that fail to satisfy a predicate.
  *
  * @since 0.1.0
  * @category Filterable
@@ -466,7 +459,7 @@ export const filter: {
 } = flow(O.fromPredicate, filterMap)
 
 /**
- * Separate the elements of an `AsyncIter` into two `AsyncIter`s according to a predicate.
+ * Separate elements of an `AsyncIter` into two `AsyncIter`s according to a predicate.
  *
  * @since 0.1.0
  * @category Filterable
@@ -502,8 +495,8 @@ export const separate: Filterable1<URI>['separate'] =
   partitionMap(identity)
 
 /**
- * Returns an `AsyncIter` that yields the elements of the first `AsyncIter`
- * followed by the elements of the second `AsyncIter`.
+ * Returns an `AsyncIter` that yields elements of the first `AsyncIter` followed
+ * by the elements of the second `AsyncIter`.
  *
  * @since 0.1.0
  * @category Alt
@@ -517,8 +510,8 @@ export const altW =
     }
 
 /**
- * Returns an `AsyncIter` that yields the elements of the first `AsyncIter`
- * followed by the elements of the second `AsyncIter`.
+ * Returns an `AsyncIter` that yields elements of the first `AsyncIter` followed
+ * by the elements of the second `AsyncIter`.
  *
  * @since 0.1.0
  * @category Alt
@@ -582,8 +575,8 @@ export const Functor: Functor1<URI> = {
 }
 
 /**
- * Returns an `AsyncIter` which yields the values produced by applying functions
- * emitted by the first `AsyncIter` to the given value.
+ * Returns an `AsyncIter` that yields values produced by applying functions
+ * emitted by the first `AsyncIter` to the provided value.
  *
  * @since 0.1.0
  * @category Combinators
@@ -668,6 +661,9 @@ export const Chain: Chain1<URI> = {
 }
 
 /**
+ * Composes computations in sequence, using the return value of one computation
+ * to determine the next computation and keeping only the result of the first.
+ *
  * @since 0.1.0
  * @category Combinators
  */
@@ -804,8 +800,8 @@ export const fromIOK: <A extends ReadonlyArray<unknown>, B>(
   fromIOK_(FromIO)
 
 /**
- * Return an `AsyncIter` which yields the values from the `IO`s produced by
- * applying a given function to the elements of the first `AsyncIter`.
+ * Return an `AsyncIter` which yields values of `IO`s produced by applying the
+ * function to each element of the first `AsyncIter`.
  *
  * @since 0.1.0
  * @category Combinators
@@ -817,6 +813,9 @@ export const chainIOK: <A, B>(
   chainIOK_(FromIO, Chain)
 
 /**
+ * Composes computations in sequence, using the return value of one computation
+ * to determine the next computation and keeping only the result of the first.
+ * 
  * @since 0.1.0
  * @category Combinators
  */
@@ -854,7 +853,7 @@ export const fromTaskK: <A extends ReadonlyArray<unknown>, B>(
 
 /**
  * Return an `AsyncIter` which yields the values from the `IO`s produced by
- * applying a given function to the elements of the first `AsyncIter`.
+ * applying a provided function to the elements of the first `AsyncIter`.
  *
  * @since 0.1.0
  * @category Combinators
@@ -866,6 +865,9 @@ export const chainTaskK: <A, B>(
   chainTaskK_(FromTask, Chain)
 
 /**
+ * Composes computations in sequence, using the return value of one computation
+ * to determine the next computation and keeping only the result of the first.
+ * 
  * @since 0.1.0
  * @category Combinators
  */
@@ -957,6 +959,8 @@ const _chainC =
     chainC(concurrency)(f)(fa)
 
 /**
+ * Returns concurrent version of `Apply` type class.
+ *
  * @since 0.1.0
  * @category Instances
  */
@@ -967,6 +971,8 @@ export const getApplyC = (concurrency: number): Apply1<URI> => ({
 })
 
 /**
+ * Concurrent version of `apFirst`.
+ *
  * @since 0.1.0
  * @category Combinators
  */
@@ -975,6 +981,8 @@ export const apFirstC = (concurrency: number): typeof apFirst =>
   apFirst_(getApplyC(concurrency))
 
 /**
+ * Concurrent version of `apSecond`.
+ *
  * @since 0.1.0
  * @category Combinators
  */
@@ -983,6 +991,8 @@ export const apSecondC = (concurrency: number): typeof apSecond =>
   apSecond_(getApplyC(concurrency))
 
 /**
+ * Returns concurrent version of `Applicative` type class.
+ *
  * @since 0.1.0
  * @category Instances
  */
@@ -994,6 +1004,8 @@ export const getApplicativeC = (concurrency: number): Applicative1<URI> => ({
 })
 
 /**
+ * Returns concurrent version of `Chain` type class.
+ *
  * @since 0.1.0
  * @category Instances
  */
@@ -1005,6 +1017,8 @@ export const getChainC = (concurrency: number): Chain1<URI> => ({
 })
 
 /**
+ * Concurrent version of `chainFirst`.
+ *
  * @since 0.1.0
  * @category Combinators
  */
@@ -1012,6 +1026,8 @@ export const chainFirstC = (concurrency: number) =>
   chainFirst_(getChainC(concurrency))
 
 /**
+ * Returns concurrent version of `Monad` type class.
+ *
  * @since 0.1.0
  * @category Instances
  */
@@ -1024,6 +1040,8 @@ export const getMonadC = (concurrency: number): Monad1<URI> => ({
 })
 
 /**
+ * Returns concurrent version of `MonadIO` type class.
+ *
  * @since 0.1.0
  * @category Instances
  */
@@ -1037,6 +1055,8 @@ export const getMonadIOC = (concurrency: number): MonadIO1<URI> => ({
 })
 
 /**
+ * Returns concurrent version of `MonadTask` type class.
+ *
  * @since 0.1.0
  * @category Instances
  */
