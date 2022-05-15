@@ -108,6 +108,18 @@ export const fromTask: FromTask1<URI>['fromTask'] = (ma) =>
  *
  * @since 0.1.0
  * @category Constructors
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       'a b c',
+ *       AI.fromIterableK((s) => s.split(' ')),
+ *       AI.toArray
+ *     )(),
+ *     ['a', 'b', 'c']
+ *   )
  */
 export const fromIterableK: <A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => Iterable<B>
@@ -125,6 +137,14 @@ export const fromIterableK: <A extends ReadonlyArray<unknown>, B>(
  *
  * @since 0.1.0
  * @category Constructors
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(AI.fromIterable(['a', 'b', 'c']), AI.toArray)(),
+ *     ['a', 'b', 'c']
+ *   )
  */
 export const fromIterable: <A>(iter: Iterable<A>) => AsyncIter<A> =
   fromIterableK(identity)
@@ -357,6 +377,21 @@ export const zero: Zero1<URI>['zero'] = () => fromIterable([])
  *
  * @since 0.1.0
  * @category Functor
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       async function* () {
+ *         yield 2
+ *         yield 3
+ *       },
+ *       AI.map((a) => a * 2),
+ *       AI.toArray
+ *     )(),
+ *     [2, 4, 6]
+ *   )
  */
 export const map: <A, B>(
   f: (a: A) => B
@@ -373,6 +408,25 @@ export const map: <A, B>(
  *
  * @since 0.1.0
  * @category Apply
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       async function* () {
+ *         yield (n: number) => n + 3
+ *         yield (n: number) => n * 4
+ *       },
+ *       AI.ap(async function* () {
+ *         yield 2
+ *         yield 3
+ *         yield 4
+ *       }),
+ *       AI.toArray
+ *     )(),
+ *     [5, 6, 7, 8, 12, 16]
+ *   )
  */
 export const ap: <A>(
   fa: AsyncIter<A>
@@ -385,6 +439,23 @@ export const ap: <A>(
  *
  * @since 0.1.0
  * @category Monad
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from '.'
+ *   pipe(
+ *     async function* () {
+ *       yield 2
+ *       yield 3
+ *     },
+ *     AI.chain(
+ *       (n) =>
+ *         async function* () {
+ *           yield n * 2
+ *           yield n * 3
+ *           yield n * 4
+ *         }
+ *     )
+ *   )
  */
 export const chain: <A, B>(
   f: (a: A) => AsyncIter<B>
@@ -500,6 +571,18 @@ export const separate: Filterable1<URI>['separate'] =
  *
  * @since 0.1.0
  * @category Alt
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { fromIterable, altW, toArray } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       fromIterable([1, 2, 3]),
+ *       altW(() => fromIterable(['a', 'b', 'c'])),
+ *       toArray
+ *     )(),
+ *     [1, 2, 3, 'a', 'b', 'c']
+ *   )
  */
 export const altW =
   <B>(that: Lazy<AsyncIter<B>>) =>
@@ -515,6 +598,18 @@ export const altW =
  *
  * @since 0.1.0
  * @category Alt
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { fromIterable, alt, toArray } from 'fp-ts-iter'
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       fromIterable([1, 2, 3]),
+ *       alt(() => fromIterable([4, 5, 6])),
+ *       toArray
+ *     )(),
+ *     [1, 2, 3, 4, 5, 6]
+ *   )
  */
 export const alt: <A>(
   that: Lazy<AsyncIter<A>>
@@ -938,6 +1033,29 @@ export const chainC =
  *
  * @since 0.1.0
  * @category Apply
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   const delay = (ms: number) =>
+ *     new Promise((resolve) => setTimeout(resolve, ms))
+ *
+ *   assert.deepStrictEqual(
+ *     await pipe(
+ *       async function* () {
+ *         yield (n: number) => n + 3
+ *         yield (n: number) => n * 4
+ *       },
+ *       AI.apC(2)(async function* () {
+ *         await delay(100)
+ *         yield 2
+ *         await delay(100)
+ *         yield 4
+ *       }),
+ *       AI.toArray
+ *     )(),
+ *     [5, 6, 7, 8, 12, 16]
+ *   )
  */
 
 export const apC =
