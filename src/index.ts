@@ -1,19 +1,4 @@
-/** @since 1.0.0 */
-
-import { pipe } from 'fp-ts/function'
-
-// -----------------------------------------------------------------------------
-// greetings
-// -----------------------------------------------------------------------------
-
 /**
- * It's a greeting
- *
- * @since 1.0.0
- * @category Greetings
- * @example
- *   import { greet } from 'fp-ts-iter'
- *   assert.deepStrictEqual(greet('World'), 'Hello, World!')
+ * @since 0.1.0
  */
-export const greet = (name: string): string =>
-  pipe(`Hello`, (x) => `${x}, ${name}!`)
+export * as asyncIter from './AsyncIter'

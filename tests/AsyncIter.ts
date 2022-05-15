@@ -3,20 +3,10 @@ import {
   io as I,
   number as n,
   option as O,
-  pipeable,
-  readerTask,
-  readerTask as rt,
   string as s,
   task as T,
 } from 'fp-ts'
-import { apFirst as apFirst_, apSecond as apSecond_ } from 'fp-ts/lib/Apply'
-import { chainFirst as chainFirst_ } from 'fp-ts/lib/Chain'
-import {
-  chainFirstTaskK as chainFirstTaskK_,
-  chainTaskK as chainTaskK_,
-} from 'fp-ts/lib/FromTask'
-import { flow, pipe } from 'fp-ts/lib/function'
-import { Task } from 'fp-ts/lib/Task'
+import { pipe } from 'fp-ts/lib/function'
 import * as _ from '../src/AsyncIter'
 
 const of = <A>(...values: A[]) => _.fromIterable(values)
@@ -25,7 +15,182 @@ const delay = (n: number): Promise<void> =>
 
 describe('AsyncIter', () => {
   // -------------------------------------------------------------------------------------
+  // pipeables
+  // -------------------------------------------------------------------------------------  // -------------------------------------------------------------------------------------
+
+  it('map', async () => {
+    expect(
+      await pipe(
+        of(1, 2),
+        _.map((n) => n * 2),
+        _.toArray
+      )()
+    ).toEqual([2, 4])
+  })
+
+  it('ap', async () => {
+    expect(
+      await pipe(
+        _.fromIterable([
+          (a: number) => (b: number) => a + b,
+          (a: number) => (b: number) => a * b,
+        ]),
+        _.ap(_.fromIterable([2, 3])),
+        _.ap(_.fromIterable([4, 5])),
+        _.toArray
+      )()
+    ).toMatchInlineSnapshot([6, 7, 7, 8, 8, 10, 12, 15])
+  })
+
+  it('ap', async () => {
+    expect(
+      await pipe(
+        of((a: string) => (b: string) => a + b),
+        _.ap(of('a')),
+        _.ap(of('b')),
+        _.toArray
+      )()
+    ).toEqual(['ab'])
+  })
+
+  it('apFirst', async () => {
+    expect(
+      await pipe(of(1, 2), _.apFirst(of('a', 'b', 'c')), _.toArray)()
+    ).toEqual([1, 1, 1, 2, 2, 2])
+  })
+
+  it('apSecond', async () => {
+    expect(
+      await pipe(of(1, 2), _.apSecond(of('a', 'b', 'c')), _.toArray)()
+    ).toEqual(['a', 'b', 'c', 'a', 'b', 'c'])
+  })
+
+  it('chain', async () => {
+    expect(
+      await pipe(
+        of(1, 2, 3),
+        _.chain((n) => of(n, n * 2)),
+        _.toArray
+      )()
+    ).toEqual([1, 2, 2, 4, 3, 6])
+  })
+
+  it('chainFirst', async () => {
+    expect(
+      await pipe(
+        of(1, 2, 3),
+        _.chainFirst((n) => of(n, n * 2)),
+        _.toArray
+      )()
+    ).toEqual([1, 1, 2, 2, 3, 3])
+  })
+
+  it('flatten', async () => {
+    expect(await pipe(of(of(1), of(2), of(3)), _.flatten, _.toArray)()).toEqual(
+      [1, 2, 3]
+    )
+  })
+
+  it('alt', async () => {
+    expect(
+      await pipe(
+        async function* () {
+          yield 1
+          await delay(100)
+          yield 2
+        },
+        _.alt<number>(
+          _.fromAsyncIterableK(async function* () {
+            yield 3
+            await delay(100)
+            yield 4
+          })
+        ),
+        _.toArray
+      )()
+    ).toEqual([1, 2, 3, 4])
+  })
+
+  it('altW', async () => {
+    expect(
+      await pipe(
+        async function* () {
+          yield 1
+          await delay(100)
+          yield 2
+        },
+        _.altW(
+          _.fromAsyncIterableK(async function* () {
+            yield 'a'
+            await delay(100)
+            yield 'b'
+          })
+        ),
+        _.toArray
+      )()
+    ).toEqual([1, 2, 'a', 'b'])
+  })
+
+  it('concat', async () => {
+    expect(
+      await pipe(
+        async function* () {
+          yield 1
+          await delay(100)
+          yield 2
+        },
+        _.concat<number>(async function* () {
+          yield 3
+          await delay(100)
+          yield 4
+        }),
+        _.toArray
+      )()
+    ).toEqual([1, 3, 2, 4])
+  })
+
+  it('concatW', async () => {
+    expect(
+      await pipe(
+        async function* () {
+          yield 1
+          await delay(100)
+          yield 2
+        },
+        _.concatW(async function* () {
+          yield 'a'
+          await delay(100)
+          yield 'b'
+        }),
+        _.toArray
+      )()
+    ).toEqual([1, 'a', 2, 'b'])
+  })
+
+  // -------------------------------------------------------------------------------------
   // constructors
+  // -------------------------------------------------------------------------------------
+
+  it('fromIO', async () => {
+    expect(
+      await pipe(
+        _.fromIO(() => 1),
+        _.toArray
+      )()
+    ).toEqual([1])
+  })
+
+  it('fromTask', async () => {
+    expect(
+      await pipe(
+        _.fromTask(() => Promise.resolve(1)),
+        _.toArray
+      )()
+    ).toEqual([1])
+  })
+
+  // -------------------------------------------------------------------------------------
+  // combinators
   // -------------------------------------------------------------------------------------
 
   test('fromIterableK', async () => {
@@ -56,74 +221,69 @@ describe('AsyncIter', () => {
     ).toEqual([2, 4, 6])
   })
 
+  it('fromIOK', async () => {
+    expect(
+      await pipe(
+        3,
+        _.fromIOK((n) => I.of(n + 2)),
+        _.toArray
+      )()
+    ).toEqual([5])
+  })
+
+  it('chainIOK', async () => {
+    expect(
+      await pipe(
+        of('a', 'bc'),
+        _.chainIOK((s) => I.of(s.length)),
+        _.toArray
+      )()
+    ).toEqual([1, 2])
+  })
+
+  it('chainFirstIOK', async () => {
+    expect(
+      await pipe(
+        of('a', 'bc'),
+        _.chainFirstIOK((s) => I.of(s.length)),
+        _.toArray
+      )()
+    ).toEqual(['a', 'bc'])
+  })
+
+  it('fromTaskK', async () => {
+    expect(
+      await pipe(
+        2,
+        _.fromTaskK((n) => T.of(n + 4)),
+        _.toArray
+      )()
+    ).toEqual([7])
+  })
+
+  it('chainTaskK', async () => {
+    expect(
+      await pipe(
+        of('a', 'bc'),
+        _.chainTaskK((s) => T.of(s.length)),
+        _.toArray
+      )()
+    ).toEqual([1, 2])
+  })
+
+  it('chainFirstTaskK', async () => {
+    expect(
+      await pipe(
+        of('a', 'bc'),
+        _.chainFirstTaskK((s) => T.of(s.length)),
+        _.toArray
+      )()
+    ).toEqual(['a', 'bc'])
+  })
+
   // -------------------------------------------------------------------------------------
-  // combinators
+  // destructors
   // -------------------------------------------------------------------------------------
-
-  describe('Functor', () => {
-    it('map', async () => {
-      expect(
-        await pipe(
-          of(1, 2),
-          _.map((n) => n * 2),
-          _.toArray
-        )()
-      ).toEqual([2, 4])
-    })
-  })
-
-  describe('Apply', () => {
-    it('ap', async () => {
-      expect(
-        await pipe(
-          of((a: string) => (b: string) => a + b),
-          _.ap(of('a')),
-          _.ap(of('b')),
-          _.toArray
-        )()
-      ).toEqual(['ab'])
-    })
-
-    it('apFirst', async () => {
-      expect(
-        await pipe(of(1, 2), _.apFirst(of('a', 'b', 'c')), _.toArray)()
-      ).toEqual([1, 1, 1, 2, 2, 2])
-    })
-
-    it('apSecond', async () => {
-      expect(
-        await pipe(of(1, 2), _.apSecond(of('a', 'b', 'c')), _.toArray)()
-      ).toEqual(['a', 'b', 'c', 'a', 'b', 'c'])
-    })
-  })
-
-  describe('Chain', () => {
-    it('chain', async () => {
-      expect(
-        await pipe(
-          of(1, 2, 3),
-          _.chain((n) => of(n, n * 2)),
-          _.toArray
-        )()
-      ).toEqual([1, 2, 2, 4, 3, 6])
-    })
-
-    it('chainFirst', async () => {
-      expect(
-        await pipe(
-          of(1, 2, 3),
-          _.chainFirst((n) => of(n, n * 2)),
-          _.toArray
-        )()
-      ).toEqual([1, 1, 2, 2, 3, 3])
-    })
-  })
-
-  it('flatten', async () => {
-    expect(await pipe(of(of(1), of(2), of(3)), _.flatten, _.toArray)()).toEqual(
-      [1, 2, 3]
-    )
-  })
 
   it('scan', async () => {
     expect(
@@ -150,144 +310,9 @@ describe('AsyncIter', () => {
     ).toEqual(120)
   })
 
-  describe('Alt', () => {
-    it('alt', async () => {
-      expect(
-        await pipe(
-          async function* () {
-            yield 1
-            await delay(100)
-            yield 2
-          },
-          _.alt<number>(
-            _.fromAsyncIterableK(async function* () {
-              yield 3
-              await delay(100)
-              yield 4
-            })
-          ),
-          _.toArray
-        )()
-      ).toEqual([1, 2, 3, 4])
-    })
-    it('altW', async () => {
-      expect(
-        await pipe(
-          async function* () {
-            yield 1
-            await delay(100)
-            yield 2
-          },
-          _.altW(
-            _.fromAsyncIterableK(async function* () {
-              yield 'a'
-              await delay(100)
-              yield 'b'
-            })
-          ),
-          _.toArray
-        )()
-      ).toEqual([1, 2, 'a', 'b'])
-    })
-  })
-  describe('Semigroup', () => {
-    it('concat', async () => {
-      expect(
-        await pipe(
-          async function* () {
-            yield 1
-            await delay(100)
-            yield 2
-          },
-          _.concat<number>(async function* () {
-            yield 3
-            await delay(100)
-            yield 4
-          }),
-          _.toArray
-        )()
-      ).toEqual([1, 3, 2, 4])
-    })
-    it('concatW', async () => {
-      expect(
-        await pipe(
-          async function* () {
-            yield 1
-            await delay(100)
-            yield 2
-          },
-          _.concatW(async function* () {
-            yield 'a'
-            await delay(100)
-            yield 'b'
-          }),
-          _.toArray
-        )()
-      ).toEqual([1, 'a', 2, 'b'])
-    })
-  })
+  describe('FromIO', () => {})
 
-  describe('FromIO', () => {
-    it('fromIO', async () => {
-      expect(
-        await pipe(
-          _.fromIO(() => 1),
-          _.toArray
-        )()
-      ).toEqual([1])
-    })
-
-    it('chainIOK', async () => {
-      expect(
-        await pipe(
-          of('a', 'bc'),
-          _.chainIOK((s) => I.of(s.length)),
-          _.toArray
-        )()
-      ).toEqual([1, 2])
-    })
-
-    it('chainFirstIOK', async () => {
-      expect(
-        await pipe(
-          of('a', 'bc'),
-          _.chainFirstIOK((s) => I.of(s.length)),
-          _.toArray
-        )()
-      ).toEqual(['a', 'bc'])
-    })
-  })
-
-  describe('FromTask', () => {
-    it('fromTask', async () => {
-      expect(
-        await pipe(
-          _.fromTask(() => Promise.resolve(1)),
-          _.toArray
-        )()
-      ).toEqual([1])
-    })
-
-    it('chainTaskK', async () => {
-      expect(
-        await pipe(
-          of('a', 'bc'),
-          _.chainTaskK((s) => T.of(s.length)),
-          _.toArray
-        )()
-      ).toEqual([1, 2])
-    })
-
-    it('chainFirstTaskK', async () => {
-      expect(
-        await pipe(
-          of('a', 'bc'),
-          _.chainFirstTaskK((s) => T.of(s.length)),
-          _.toArray
-        )()
-      ).toEqual(['a', 'bc'])
-    })
-  })
+  describe('FromTask', () => {})
 
   describe('Compactible', () => {
     it('compact', async () => {
@@ -362,7 +387,6 @@ describe('AsyncIter', () => {
   describe('concurrent', () => {
     describe('Apply', () => {
       test('apC', async () => {
-        const apSecond = _.apSecondC(2)
         expect(
           await pipe(
             of(
@@ -380,37 +404,46 @@ describe('AsyncIter', () => {
         ).toEqual([3, 2, 4, 4])
       })
 
+      test('apFirstC', async () => {
+        expect(
+          await pipe(
+            of(1, 2, 3),
+            _.apFirstC(2)(async function* () {
+              await delay(100)
+              yield 'a'
+              await delay(100)
+              yield 'b'
+            }),
+            _.toArray
+          )()
+        ).toEqual([1, 2, 1, 2, 3, 3])
+      })
+
       test('apSecondC', async () => {
         expect(
           await pipe(
             of(1, 2, 3),
             _.apSecondC(2)(async function* () {
+              await delay(100)
               yield 'a'
               await delay(100)
               yield 'b'
             }),
             _.toArray
           )()
-        ).toEqual([1, 2, 3, 1, 2, 3])
-      })
-
-      test('apSecondC', async () => {
-        const apSecond = _.apSecondC(2)
-        expect(
-          await pipe(
-            of(1, 2, 3),
-            apSecond(async function* () {
-              yield 'a'
-              await delay(100)
-              yield 'b'
-            }),
-            _.toArray
-          )()
-        ).toEqual([1, 2, 3, 1, 2, 3])
+        ).toEqual(['a', 'a', 'b', 'b', 'a', 'b'])
       })
     })
     describe('Chain', () => {
       test('chainC', async () => {
+        expect(
+          await pipe(
+            of(),
+            _.chainC(2)(() => _.empty),
+            _.toArray
+          )()
+        ).toEqual([])
+
         expect(
           await pipe(
             of(1, 2, 3),
