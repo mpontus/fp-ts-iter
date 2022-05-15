@@ -113,8 +113,8 @@ Added in v0.1.0
 
 ## alt
 
-Returns an `AsyncIter` that yields the elements of the first `AsyncIter`
-followed by the elements of the second `AsyncIter`.
+Returns an `AsyncIter` that yields elements of the first `AsyncIter` followed
+by the elements of the second `AsyncIter`.
 
 **Signature**
 
@@ -126,8 +126,8 @@ Added in v0.1.0
 
 ## altW
 
-Returns an `AsyncIter` that yields the elements of the first `AsyncIter`
-followed by the elements of the second `AsyncIter`.
+Returns an `AsyncIter` that yields elements of the first `AsyncIter` followed
+by the elements of the second `AsyncIter`.
 
 **Signature**
 
@@ -218,6 +218,9 @@ Added in v0.1.0
 
 ## chainFirst
 
+Composes computations in sequence, using the return value of one computation
+to determine the next computation and keeping only the result of the first.
+
 **Signature**
 
 ```ts
@@ -242,6 +245,9 @@ Added in v0.1.0
 
 ## chainFirstIOK
 
+Composes computations in sequence, using the return value of one computation
+to determine the next computation and keeping only the result of the first.
+
 **Signature**
 
 ```ts
@@ -251,6 +257,9 @@ export declare const chainFirstIOK: <A, B>(f: (a: A) => IO<B>) => (first: AsyncI
 Added in v0.1.0
 
 ## chainFirstTaskK
+
+Composes computations in sequence, using the return value of one computation
+to determine the next computation and keeping only the result of the first.
 
 **Signature**
 
@@ -262,8 +271,8 @@ Added in v0.1.0
 
 ## chainIOK
 
-Return an `AsyncIter` which yields the values from the `IO`s produced by
-applying a given function to the elements of the first `AsyncIter`.
+Return an `AsyncIter` which yields values of `IO`s produced by applying the
+function to each element of the first `AsyncIter`.
 
 **Signature**
 
@@ -276,7 +285,7 @@ Added in v0.1.0
 ## chainTaskK
 
 Return an `AsyncIter` which yields the values from the `IO`s produced by
-applying a given function to the elements of the first `AsyncIter`.
+applying a provided function to the elements of the first `AsyncIter`.
 
 **Signature**
 
@@ -288,10 +297,7 @@ Added in v0.1.0
 
 ## concat
 
-Returns an `AsyncIter` that yields the values from both given `AsyncIter`s.
-
-This function subscribes to both `AsyncIter`s and yields their values in
-parallel. Use `altW` if you want to concatenate their values sequentially.
+Returns an `AsyncIter` that combines the values of both provided `AsyncIter`s.
 
 **Signature**
 
@@ -303,10 +309,7 @@ Added in v0.1.0
 
 ## concatW
 
-Returns an `AsyncIter` that yields the values from both given `AsyncIter`s.
-
-This function subscribes to both `AsyncIter`s and yields their values in
-parallel. Use `altW` if you want to concatenate their values sequentially.
+Returns an `AsyncIter` that combines the values of both provided `AsyncIter`s.
 
 **Signature**
 
@@ -318,8 +321,8 @@ Added in v0.1.0
 
 ## flap
 
-Returns an `AsyncIter` which yields the values produced by applying functions
-emitted by the first `AsyncIter` to the given value.
+Returns an `AsyncIter` that yields values produced by applying functions
+emitted by the first `AsyncIter` to the provided value.
 
 **Signature**
 
@@ -386,9 +389,9 @@ Added in v0.1.0
 
 ## scan
 
-Returns an `AsyncIter` that yields the values produced by applying the given
-function to the elements of the given `AsyncIter`, passing it the result of
-the previous call and starting with the initial value.
+Returns an `AsyncIter` that yields the values produced by applying the
+function to the elements of the `AsyncIter`, passing it the result of the
+previous call, starting with the initial value.
 
 **Signature**
 
@@ -428,7 +431,7 @@ Added in v0.1.0
 
 ## fromAsyncIterable
 
-Returns an `AsyncIter` that yields the elements of the given `AsyncIterable`.
+Returns an `AsyncIter` that yields the elements of the provided `AsyncIterable`.
 
 **Signature**
 
@@ -440,8 +443,8 @@ Added in v0.1.0
 
 ## fromAsyncIterableK
 
-Returns a constructor, that passes its arguments to the given `AsyncIterable`
-constructor and returns an `AsyncIter` that yields the same elements.
+Returns a function that passes its arguments to the provided constructor and
+returns an `AsyncIter` that yields the elements from the resulting `AsyncIterable`.
 
 **Signature**
 
@@ -455,7 +458,7 @@ Added in v0.1.0
 
 ## fromIterable
 
-Returns an `AsyncIter` that yields the elements of the given `Iterable`.
+Returns an `AsyncIter` that yields the elements of the provided `Iterable`.
 
 **Signature**
 
@@ -467,8 +470,8 @@ Added in v0.1.0
 
 ## fromIterableK
 
-Returns a constructor, that passes its arguments to the given `Iterable`
-constructor and returns an `AsyncIter` that yields the same elements.
+Returns a function that passes its arguments to the provided constructor and
+returns an `AsyncIter` that yields the elements from the resulting `Iterable`.
 
 **Signature**
 
@@ -484,9 +487,8 @@ Added in v0.1.0
 
 ## foldMap
 
-Returns a `Task` of value produced by applying the given function to the
-elements of the given `AsyncIter` and concatenating the results using the
-given monoid.
+Returns a `Task` containing the combined value produced by applying the
+function to the elements of the `AsyncIter`.
 
 **Signature**
 
@@ -498,9 +500,9 @@ Added in v0.1.0
 
 ## reduce
 
-Returns a `Task` containing last value produced by applying the given
-function to each element of the given `AsyncIter`, passing it the result of
-the previous call and starting with the initial value.
+Returns a `Task` containing the last value produced by applying the function
+to each element of the `AsyncIter`, passing it the result of the previous
+call, starting with the initial value.
 
 **Signature**
 
@@ -512,7 +514,7 @@ Added in v0.1.0
 
 ## toArray
 
-Returns a `Task` of array containing the elements of the given `AsyncIter`.
+Returns a `Task` of array containing the elements of the provided `AsyncIter`.
 
 **Signature**
 
@@ -524,7 +526,7 @@ Added in v0.1.0
 
 ## toReadonlyArray
 
-Returns a `Task` of readonly array containing the elements of the given `AsyncIter`.
+Returns a `Task` of readonly array containing the elements of the provided `AsyncIter`.
 
 **Signature**
 
@@ -538,7 +540,7 @@ Added in v0.1.0
 
 ## filter
 
-Omit the elements of an `AsyncIter` that fail to satisfy a predicate.
+Omit elements of an `AsyncIter` that fail to satisfy a predicate.
 
 **Signature**
 
@@ -565,7 +567,7 @@ Added in v0.1.0
 
 ## partition
 
-Separate the elements of an `AsyncIter` into two `AsyncIter`s according to a predicate.
+Separate elements of an `AsyncIter` into two `AsyncIter`s according to a predicate.
 
 **Signature**
 
@@ -580,7 +582,7 @@ Added in v0.1.0
 
 ## partitionMap
 
-Separate the elements of an `AsyncIter` into two `AsyncIter`s according to a
+Separate elements of an `AsyncIter` into two `AsyncIter`s according to a
 mapping function.
 
 **Signature**
@@ -597,7 +599,7 @@ Added in v0.1.0
 
 ## fromTask
 
-Return an `AsyncIter` which yields only the value of the given `Task`.
+Return an `AsyncIter` which yields only the value of the provided `Task`.
 
 **Signature**
 
@@ -611,8 +613,8 @@ Added in v0.1.0
 
 ## map
 
-Returns an `AsyncIter` that yields the results of applying a given function
-to the elements of the first `AsyncIter`.
+Returns an `AsyncIter` that yields the results of applying the function to
+the elements of the first `AsyncIter`.
 
 **Signature**
 
@@ -927,7 +929,7 @@ Added in v0.1.0
 ## chain
 
 Returns an `AsyncIter` that yields the elements of each `AsyncIter` produced
-by applying a given function to the elements of the first `AsyncIter`.
+by applying the function to the elements of the first `AsyncIter`.
 
 **Signature**
 
@@ -955,7 +957,7 @@ Added in v0.1.0
 
 ## fromIO
 
-Return an `AsyncIter` which yields only the value of the given `IO`.
+Return an `AsyncIter` which yields only the value of the provided `IO`.
 
 **Signature**
 
@@ -969,7 +971,7 @@ Added in v0.1.0
 
 ## of
 
-Returns an `AsyncIter` containing only a given element.
+Returns an `AsyncIter` containing only the provided value.
 
 **Signature**
 
