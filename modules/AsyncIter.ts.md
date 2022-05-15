@@ -182,6 +182,8 @@ Added in v0.1.0
 
 ## apFirstC
 
+Concurrent version of `apFirst`.
+
 **Signature**
 
 ```ts
@@ -204,6 +206,8 @@ Added in v0.1.0
 
 ## apSecondC
 
+Concurrent version of `apSecond`.
+
 **Signature**
 
 ```ts
@@ -223,6 +227,8 @@ export declare const chainFirst: <A, B>(f: (a: A) => AsyncIter<B>) => (first: As
 Added in v0.1.0
 
 ## chainFirstC
+
+Concurrent version of `chainFirst`.
 
 **Signature**
 
@@ -808,6 +814,8 @@ Added in v0.1.0
 
 ## getApplicativeC
 
+Returns concurrent version of `Applicative` type class.
+
 **Signature**
 
 ```ts
@@ -817,6 +825,8 @@ export declare const getApplicativeC: (concurrency: number) => Applicative1<URI>
 Added in v0.1.0
 
 ## getApplyC
+
+Returns concurrent version of `Apply` type class.
 
 **Signature**
 
@@ -828,6 +838,8 @@ Added in v0.1.0
 
 ## getChainC
 
+Returns concurrent version of `Chain` type class.
+
 **Signature**
 
 ```ts
@@ -837,6 +849,8 @@ export declare const getChainC: (concurrency: number) => Chain1<URI>
 Added in v0.1.0
 
 ## getMonadC
+
+Returns concurrent version of `Monad` type class.
 
 **Signature**
 
@@ -848,6 +862,8 @@ Added in v0.1.0
 
 ## getMonadIOC
 
+Returns concurrent version of `MonadIO` type class.
+
 **Signature**
 
 ```ts
@@ -857,6 +873,8 @@ export declare const getMonadIOC: (concurrency: number) => MonadIO1<URI>
 Added in v0.1.0
 
 ## getMonadTaskC
+
+Returns concurrent version of `MonadTask` type class.
 
 **Signature**
 
