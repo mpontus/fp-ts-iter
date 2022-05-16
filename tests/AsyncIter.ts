@@ -310,10 +310,6 @@ describe('AsyncIter', () => {
     ).toEqual(120)
   })
 
-  describe('FromIO', () => {})
-
-  describe('FromTask', () => {})
-
   describe('Compactible', () => {
     it('compact', async () => {
       expect(

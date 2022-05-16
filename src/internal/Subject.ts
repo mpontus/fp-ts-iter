@@ -2,7 +2,6 @@ import { Deferred } from './Deferred'
 
 class ReadonlySubject<T> implements AsyncIterableIterator<T> {
   private done?: boolean
-  // private result?: Promise<IteratorReturnResult<unknown>>
   private pending: Array<Deferred<IteratorResult<T>>> = []
   private queue: Array<Promise<IteratorResult<T>>> = []
 

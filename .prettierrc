@@ -2,6 +2,7 @@
   "singleQuote": true,
   "printWidth": 80,
   "semi": false,
+  "trailingComma": "es5",
   "plugins": ["prettier-plugin-jsdoc"],
   "jsdocSingleLineComment": false
 }

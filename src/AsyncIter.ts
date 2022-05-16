@@ -44,7 +44,6 @@ import {
 } from 'fp-ts/lib/FromTask'
 import { flow, identity, Lazy, pipe } from 'fp-ts/lib/function'
 import { flap as flap_, Functor1 } from 'fp-ts/lib/Functor'
-import { IO } from 'fp-ts/lib/IO'
 import { Monad1 } from 'fp-ts/lib/Monad'
 import { MonadIO1 } from 'fp-ts/lib/MonadIO'
 import { MonadTask1 } from 'fp-ts/lib/MonadTask'
@@ -56,7 +55,7 @@ import { Refinement } from 'fp-ts/lib/Refinement'
 import { Semigroup } from 'fp-ts/lib/Semigroup'
 import { Separated } from 'fp-ts/lib/Separated'
 import { Task } from 'fp-ts/lib/Task'
-import { guard as guard_, Zero1 } from 'fp-ts/lib/Zero'
+import { Zero1 } from 'fp-ts/lib/Zero'
 import { Deferred } from './internal/Deferred'
 import { Subject } from './internal/Subject'
 
@@ -65,6 +64,7 @@ import { Subject } from './internal/Subject'
 // -------------------------------------------------------------------------------------
 
 /**
+ * @ignore
  * @since 0.1.0
  * @category Model
  */
@@ -620,12 +620,14 @@ export const alt: <A>(
 // -------------------------------------------------------------------------------------
 
 /**
+ * @ignore
  * @since 0.1.0
  * @category Instances
  */
 export const URI = 'AsyncIter'
 
 /**
+ * @ignore
  * @since 0.1.0
  * @category Instances
  */
@@ -676,9 +678,7 @@ export const Functor: Functor1<URI> = {
  * @since 0.1.0
  * @category Combinators
  */
-export const flap: <A>(
-  a: A
-) => <B>(fab: AsyncIter<(a: A) => B>) => AsyncIter<B> =
+export const flap =
   /*#__PURE__*/
   flap_(Functor)
 
@@ -711,9 +711,7 @@ export const Apply: Apply1<URI> = {
  * @since 0.1.0
  * @category Combinators
  */
-export const apFirst: <B>(
-  second: AsyncIter<B>
-) => <A>(first: AsyncIter<A>) => AsyncIter<A> =
+export const apFirst =
   /*#__PURE__*/
   apFirst_(Apply)
 
@@ -723,9 +721,7 @@ export const apFirst: <B>(
  * @since 0.1.0
  * @category Combinators
  */
-export const apSecond: <B>(
-  second: AsyncIter<B>
-) => <A>(first: AsyncIter<A>) => AsyncIter<B> =
+export const apSecond =
   /*#__PURE__*/
   apSecond_(Apply)
 
@@ -762,9 +758,7 @@ export const Chain: Chain1<URI> = {
  * @since 0.1.0
  * @category Combinators
  */
-export const chainFirst: <A, B>(
-  f: (a: A) => AsyncIter<B>
-) => (first: AsyncIter<A>) => AsyncIter<A> =
+export const chainFirst =
   /*#__PURE__*/
   chainFirst_(Chain)
 
@@ -888,9 +882,7 @@ export const FromIO: FromIO1<URI> = {
  * @since 0.1.0
  * @category Combinators
  */
-export const fromIOK: <A extends ReadonlyArray<unknown>, B>(
-  f: (...a: A) => IO<B>
-) => (...a: A) => AsyncIter<B> =
+export const fromIOK =
   /*#__PURE__*/
   fromIOK_(FromIO)
 
@@ -901,22 +893,18 @@ export const fromIOK: <A extends ReadonlyArray<unknown>, B>(
  * @since 0.1.0
  * @category Combinators
  */
-export const chainIOK: <A, B>(
-  f: (a: A) => IO<B>
-) => (first: AsyncIter<A>) => AsyncIter<B> =
+export const chainIOK =
   /*#__PURE__*/
   chainIOK_(FromIO, Chain)
 
 /**
  * Composes computations in sequence, using the return value of one computation
  * to determine the next computation and keeping only the result of the first.
- * 
+ *
  * @since 0.1.0
  * @category Combinators
  */
-export const chainFirstIOK: <A, B>(
-  f: (a: A) => IO<B>
-) => (first: AsyncIter<A>) => AsyncIter<A> =
+export const chainFirstIOK =
   /*#__PURE__*/
   chainFirstIOK_(FromIO, Chain)
 
@@ -940,9 +928,7 @@ export const FromTask: FromTask1<URI> = {
  * @since 0.1.0
  * @category Combinators
  */
-export const fromTaskK: <A extends ReadonlyArray<unknown>, B>(
-  f: (...a: A) => Task<B>
-) => (...a: A) => AsyncIter<B> =
+export const fromTaskK =
   /*#__PURE__*/
   fromTaskK_(FromTask)
 
@@ -953,22 +939,18 @@ export const fromTaskK: <A extends ReadonlyArray<unknown>, B>(
  * @since 0.1.0
  * @category Combinators
  */
-export const chainTaskK: <A, B>(
-  f: (a: A) => Task<B>
-) => (first: AsyncIter<A>) => AsyncIter<B> =
+export const chainTaskK =
   /*#__PURE__*/
   chainTaskK_(FromTask, Chain)
 
 /**
  * Composes computations in sequence, using the return value of one computation
  * to determine the next computation and keeping only the result of the first.
- * 
+ *
  * @since 0.1.0
  * @category Combinators
  */
-export const chainFirstTaskK: <A, B>(
-  f: (a: A) => Task<B>
-) => (first: AsyncIter<A>) => AsyncIter<A> =
+export const chainFirstTaskK =
   /*#__PURE__*/
   chainFirstTaskK_(FromTask, Chain)
 
@@ -1140,7 +1122,7 @@ export const getChainC = (concurrency: number): Chain1<URI> => ({
  * @since 0.1.0
  * @category Combinators
  */
-export const chainFirstC = (concurrency: number) =>
+export const chainFirstC = (concurrency: number): typeof chainFirst =>
   chainFirst_(getChainC(concurrency))
 
 /**
