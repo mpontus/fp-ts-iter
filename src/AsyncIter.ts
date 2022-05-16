@@ -964,7 +964,7 @@ export const chainFirstTaskK =
  * @since 0.1.0
  * @category Monad
  */
-export const chainC =
+export const chainPar =
   (concurrency: number) =>
   <A, B>(f: (a: A) => AsyncIter<B>) =>
   (ma: AsyncIter<A>): AsyncIter<B> =>
@@ -1028,7 +1028,7 @@ export const chainC =
  *         yield (n: number) => n + 3
  *         yield (n: number) => n * 4
  *       },
- *       AI.apC(2)(async function* () {
+ *       AI.apPar(2)(async function* () {
  *         await delay(100)
  *         yield 2
  *         await delay(100)
@@ -1040,23 +1040,23 @@ export const chainC =
  *   )
  */
 
-export const apC =
+export const apPar =
   (concurrency: number) =>
   <A>(fa: AsyncIter<A>) =>
   <B>(fab: AsyncIter<(a: A) => B>): AsyncIter<B> =>
     pipe(
       fab,
-      chainC(concurrency)((f) => pipe(fa, map(f)))
+      chainPar(concurrency)((f) => pipe(fa, map(f)))
     )
 
-const _apC =
+const _apPar =
   (concurrency: number): Apply1<URI>['ap'] =>
   (fab, fa) =>
-    apC(concurrency)(fa)(fab)
-const _chainC =
+    apPar(concurrency)(fa)(fab)
+const _chainPar =
   (concurrency: number): Chain1<URI>['chain'] =>
   (fa, f) =>
-    chainC(concurrency)(f)(fa)
+    chainPar(concurrency)(f)(fa)
 
 /**
  * Returns concurrent version of `Apply` type class.
@@ -1064,10 +1064,10 @@ const _chainC =
  * @since 0.1.0
  * @category Instances
  */
-export const getApplyC = (concurrency: number): Apply1<URI> => ({
+export const getApplyPar = (concurrency: number): Apply1<URI> => ({
   URI,
   map: _map,
-  ap: _apC(concurrency),
+  ap: _apPar(concurrency),
 })
 
 /**
@@ -1076,9 +1076,9 @@ export const getApplyC = (concurrency: number): Apply1<URI> => ({
  * @since 0.1.0
  * @category Combinators
  */
-export const apFirstC = (concurrency: number): typeof apFirst =>
+export const apFirstPar = (concurrency: number): typeof apFirst =>
   /*#__PURE__*/
-  apFirst_(getApplyC(concurrency))
+  apFirst_(getApplyPar(concurrency))
 
 /**
  * Concurrent version of `apSecond`.
@@ -1086,9 +1086,9 @@ export const apFirstC = (concurrency: number): typeof apFirst =>
  * @since 0.1.0
  * @category Combinators
  */
-export const apSecondC = (concurrency: number): typeof apSecond =>
+export const apSecondPar = (concurrency: number): typeof apSecond =>
   /*#__PURE__*/
-  apSecond_(getApplyC(concurrency))
+  apSecond_(getApplyPar(concurrency))
 
 /**
  * Returns concurrent version of `Applicative` type class.
@@ -1096,10 +1096,10 @@ export const apSecondC = (concurrency: number): typeof apSecond =>
  * @since 0.1.0
  * @category Instances
  */
-export const getApplicativeC = (concurrency: number): Applicative1<URI> => ({
+export const getApplicativePar = (concurrency: number): Applicative1<URI> => ({
   URI,
   map: _map,
-  ap: _apC(concurrency),
+  ap: _apPar(concurrency),
   of,
 })
 
@@ -1109,11 +1109,11 @@ export const getApplicativeC = (concurrency: number): Applicative1<URI> => ({
  * @since 0.1.0
  * @category Instances
  */
-export const getChainC = (concurrency: number): Chain1<URI> => ({
+export const getChainPar = (concurrency: number): Chain1<URI> => ({
   URI,
   map: _map,
-  ap: _apC(concurrency),
-  chain: _chainC(concurrency),
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
 })
 
 /**
@@ -1122,8 +1122,8 @@ export const getChainC = (concurrency: number): Chain1<URI> => ({
  * @since 0.1.0
  * @category Combinators
  */
-export const chainFirstC = (concurrency: number): typeof chainFirst =>
-  chainFirst_(getChainC(concurrency))
+export const chainFirstPar = (concurrency: number): typeof chainFirst =>
+  chainFirst_(getChainPar(concurrency))
 
 /**
  * Returns concurrent version of `Monad` type class.
@@ -1131,11 +1131,11 @@ export const chainFirstC = (concurrency: number): typeof chainFirst =>
  * @since 0.1.0
  * @category Instances
  */
-export const getMonadC = (concurrency: number): Monad1<URI> => ({
+export const getMonadPar = (concurrency: number): Monad1<URI> => ({
   URI,
   map: _map,
-  ap: _apC(concurrency),
-  chain: _chainC(concurrency),
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
   of,
 })
 
@@ -1145,11 +1145,11 @@ export const getMonadC = (concurrency: number): Monad1<URI> => ({
  * @since 0.1.0
  * @category Instances
  */
-export const getMonadIOC = (concurrency: number): MonadIO1<URI> => ({
+export const getMonadIOPar = (concurrency: number): MonadIO1<URI> => ({
   URI,
   map: _map,
-  ap: _apC(concurrency),
-  chain: _chainC(concurrency),
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
   of,
   fromIO,
 })
@@ -1160,11 +1160,11 @@ export const getMonadIOC = (concurrency: number): MonadIO1<URI> => ({
  * @since 0.1.0
  * @category Instances
  */
-export const getMonadTaskC = (concurrency: number): MonadTask1<URI> => ({
+export const getMonadTaskPar = (concurrency: number): MonadTask1<URI> => ({
   URI,
   map: _map,
-  ap: _apC(concurrency),
-  chain: _chainC(concurrency),
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
   of,
   fromIO,
   fromTask,

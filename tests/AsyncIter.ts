@@ -382,14 +382,14 @@ describe('AsyncIter', () => {
 
   describe('concurrent', () => {
     describe('Apply', () => {
-      test('apC', async () => {
+      test('apPar', async () => {
         expect(
           await pipe(
             of(
               (a: number) => a + 2,
               (a: number) => a * 2
             ),
-            _.apC(2)(async function* () {
+            _.apPar(2)(async function* () {
               await delay(100)
               yield 1
               await delay(100)
@@ -400,11 +400,11 @@ describe('AsyncIter', () => {
         ).toEqual([3, 2, 4, 4])
       })
 
-      test('apFirstC', async () => {
+      test('apFirstPar', async () => {
         expect(
           await pipe(
             of(1, 2, 3),
-            _.apFirstC(2)(async function* () {
+            _.apFirstPar(2)(async function* () {
               await delay(100)
               yield 'a'
               await delay(100)
@@ -415,11 +415,11 @@ describe('AsyncIter', () => {
         ).toEqual([1, 2, 1, 2, 3, 3])
       })
 
-      test('apSecondC', async () => {
+      test('apSecondPar', async () => {
         expect(
           await pipe(
             of(1, 2, 3),
-            _.apSecondC(2)(async function* () {
+            _.apSecondPar(2)(async function* () {
               await delay(100)
               yield 'a'
               await delay(100)
@@ -431,11 +431,11 @@ describe('AsyncIter', () => {
       })
     })
     describe('Chain', () => {
-      test('chainC', async () => {
+      test('chainPar', async () => {
         expect(
           await pipe(
             of(),
-            _.chainC(2)(() => _.empty),
+            _.chainPar(2)(() => _.empty),
             _.toArray
           )()
         ).toEqual([])
@@ -443,7 +443,7 @@ describe('AsyncIter', () => {
         expect(
           await pipe(
             of(1, 2, 3),
-            _.chainC(2)(
+            _.chainPar(2)(
               _.fromAsyncIterableK(async function* () {
                 await delay(100)
                 yield 'a'
@@ -456,11 +456,11 @@ describe('AsyncIter', () => {
         ).toEqual(['a', 'a', 'b', 'b', 'a', 'b'])
       })
 
-      test('chainFirstC', async () => {
+      test('chainFirstPar', async () => {
         expect(
           await pipe(
             of(1, 2, 3),
-            _.chainFirstC(2)(
+            _.chainFirstPar(2)(
               _.fromAsyncIterableK(async function* () {
                 await delay(100)
                 yield 'a'
