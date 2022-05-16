@@ -32,6 +32,7 @@
     // "allowUmdGlobalAccess": true,          /* Allow accessing UMD globals from modules. */
 
     /* Advanced Options */
+    "downlevelIteration": true /* Provide full support for iterables in 'for-of', spread, and destructuring when targeting 'ES5' or 'ES3'. */,
     "skipLibCheck": true /* Skip type checking of declaration files. */,
     "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
   }
