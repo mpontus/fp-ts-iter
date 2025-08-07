@@ -27,7 +27,11 @@ import {
   apS as apS_,
   sequenceS,
 } from 'fp-ts/lib/Apply'
-import { Chain1, chainFirst as chainFirst_, bind as bind_ } from 'fp-ts/lib/Chain'
+import {
+  Chain1,
+  chainFirst as chainFirst_,
+  bind as bind_,
+} from 'fp-ts/lib/Chain'
 import { Compactable1 } from 'fp-ts/lib/Compactable'
 import { Either } from 'fp-ts/lib/Either'
 import { Filterable1 } from 'fp-ts/lib/Filterable'
@@ -838,8 +842,6 @@ export const getMonadTaskPar = (concurrency: number): MonadTask1<URI> => ({
   fromTask,
 })
 
-
-
 // -------------------------------------------------------------------------------------
 // utils
 // -------------------------------------------------------------------------------------
@@ -1239,29 +1241,68 @@ export const chainFirstTaskK =
 // -------------------------------------------------------------------------------------
 
 /**
- * @category do notation
  * @since 0.1.0
+ * @category Do notation
  */
 export const Do: AsyncIter<{}> = /*#__PURE__*/ of({})
 
 /**
- * @category do notation
  * @since 0.1.0
+ * @category Do notation
  */
 export const bindTo = /*#__PURE__*/ bindTo_(Functor)
 
 /**
- * @category do notation
  * @since 0.1.0
+ * @category Do notation
  */
 export const bind = /*#__PURE__*/ bind_(Chain)
 
 /**
- * @category do notation
  * @since 0.1.0
+ * @category Do notation
  */
 export const apS = /*#__PURE__*/ apS_(Apply)
 
 // -------------------------------------------------------------------------------------
-// type class members
+// legacy
 // -------------------------------------------------------------------------------------
+
+/**
+ * @since 0.1.0
+ * @category Legacy
+ */
+export const chainIterableK: <A, B>(
+  f: (a: A) => Iterable<B>
+) => (iter: AsyncIter<A>) => AsyncIter<B> = (f) =>
+  chain((a) => fromIterable(f(a)))
+
+/**
+ * @since 0.1.0
+ * @category Legacy
+ */
+export const chainAsyncIterableK: <A, B>(
+  f: (a: A) => AsyncIterable<B>
+) => (iter: AsyncIter<A>) => AsyncIter<B> = (f) =>
+  chain((a) => fromAsyncIterable(f(a)))
+
+/**
+ * Returns concurrent version of the functions in the `Chain` module.
+ *
+ * @since 0.1.0
+ * @category Legacy
+ */
+export function concurrent(concurrency: number): {
+  chain: typeof chain
+  chainTaskK: typeof chainTaskK
+  chainIterableK: typeof chainIterableK
+  chainAsyncIterableK: typeof chainAsyncIterableK
+} {
+  const concurrentChain = chainPar(concurrency)
+  return {
+    chain: concurrentChain,
+    chainTaskK: (f) => concurrentChain((a) => fromTask(f(a))),
+    chainIterableK: (f) => concurrentChain((a) => fromIterable(f(a))),
+    chainAsyncIterableK: (f) => concurrentChain((a) => fromAsyncIterable(f(a))),
+  }
+}
