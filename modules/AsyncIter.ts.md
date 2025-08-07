@@ -26,15 +26,15 @@ Added in v0.1.0
   - [altW](#altw)
 - [Apply](#apply)
   - [ap](#ap)
-  - [apC](#apc)
+  - [apPar](#appar)
 - [Combinators](#combinators)
   - [apFirst](#apfirst)
-  - [apFirstC](#apfirstc)
+  - [apFirstPar](#apfirstpar)
   - [apSecond](#apsecond)
-  - [apSecondC](#apsecondc)
+  - [apSecondPar](#apsecondpar)
   - [chainFirst](#chainfirst)
-  - [chainFirstC](#chainfirstc)
   - [chainFirstIOK](#chainfirstiok)
+  - [chainFirstPar](#chainfirstpar)
   - [chainFirstTaskK](#chainfirsttaskk)
   - [chainIOK](#chainiok)
   - [chainTaskK](#chaintaskk)
@@ -52,20 +52,25 @@ Added in v0.1.0
 - [Constructors](#constructors)
   - [fromAsyncIterable](#fromasynciterable)
   - [fromAsyncIterableK](#fromasynciterablek)
+  - [fromIO](#fromio)
   - [fromIterable](#fromiterable)
   - [fromIterableK](#fromiterablek)
-- [Destructors](#destructors)
+  - [fromTask](#fromtask)
+- [Conversions](#conversions)
   - [foldMap](#foldmap)
   - [reduce](#reduce)
   - [toArray](#toarray)
   - [toReadonlyArray](#toreadonlyarray)
+- [Do notation](#do-notation)
+  - [Do](#do)
+  - [apS](#aps)
+  - [bind](#bind)
+  - [bindTo](#bindto)
 - [Filterable](#filterable)
   - [filter](#filter)
   - [filterMap](#filtermap)
   - [partition](#partition)
   - [partitionMap](#partitionmap)
-- [FromTask](#fromtask)
-  - [fromTask](#fromtask)
 - [Functor](#functor)
   - [map](#map)
 - [Instances](#instances)
@@ -77,29 +82,27 @@ Added in v0.1.0
   - [Compactable](#compactable-1)
   - [Filterable](#filterable-1)
   - [FromIO](#fromio)
-  - [FromTask](#fromtask-1)
+  - [FromTask](#fromtask)
   - [Functor](#functor-1)
   - [Monad](#monad)
   - [MonadIO](#monadio)
   - [MonadTask](#monadtask)
   - [Pointed](#pointed)
-  - [URI](#uri)
-  - [URI (type alias)](#uri-type-alias)
-  - [getApplicativeC](#getapplicativec)
-  - [getApplyC](#getapplyc)
-  - [getChainC](#getchainc)
-  - [getMonadC](#getmonadc)
-  - [getMonadIOC](#getmonadioc)
-  - [getMonadTaskC](#getmonadtaskc)
+  - [getApplicativePar](#getapplicativepar)
+  - [getApplyPar](#getapplypar)
+  - [getChainPar](#getchainpar)
+  - [getMonadIOPar](#getmonadiopar)
+  - [getMonadPar](#getmonadpar)
+  - [getMonadTaskPar](#getmonadtaskpar)
   - [getMonoid](#getmonoid)
   - [getSemigroup](#getsemigroup)
-- [Model](#model)
-  - [AsyncIter (interface)](#asynciter-interface)
+- [Legacy](#legacy)
+  - [chainAsyncIterableK](#chainasynciterablek)
+  - [chainIterableK](#chainiterablek)
+  - [concurrent](#concurrent)
 - [Monad](#monad-1)
   - [chain](#chain)
-  - [chainC](#chainc)
-- [Natural transformations](#natural-transformations)
-  - [fromIO](#fromio)
+  - [chainPar](#chainpar)
 - [Pointed](#pointed-1)
   - [of](#of)
 - [Zero](#zero)
@@ -122,6 +125,26 @@ by the elements of the second `AsyncIter`.
 export declare const alt: <A>(that: Lazy<AsyncIter<A>>) => (fa: AsyncIter<A>) => AsyncIter<A>
 ```
 
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+async function test() {
+  assert.deepStrictEqual(
+    await pipe(
+      AI.fromIterable([1, 2, 3]),
+      AI.alt(() => AI.fromIterable([4, 5, 6])),
+      AI.toArray
+    )(),
+    [1, 2, 3, 4, 5, 6]
+  )
+}
+
+test()
+```
+
 Added in v0.1.0
 
 ## altW
@@ -133,6 +156,26 @@ by the elements of the second `AsyncIter`.
 
 ```ts
 export declare const altW: <B>(that: Lazy<AsyncIter<B>>) => <A>(fa: AsyncIter<A>) => AsyncIter<B | A>
+```
+
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+async function test() {
+  assert.deepStrictEqual(
+    await pipe(
+      AI.fromIterable([1, 2, 3]),
+      AI.altW(() => AI.fromIterable(['a', 'b', 'c'])),
+      AI.toArray
+    )(),
+    [1, 2, 3, 'a', 'b', 'c']
+  )
+}
+
+test()
 ```
 
 Added in v0.1.0
@@ -150,18 +193,75 @@ the first `AsyncIter` to the elements of the second `AsyncIter`.
 export declare const ap: <A>(fa: AsyncIter<A>) => <B>(fab: AsyncIter<(a: A) => B>) => AsyncIter<B>
 ```
 
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+async function test() {
+  assert.deepStrictEqual(
+    await pipe(
+      async function* () {
+        yield (n: number) => n + 3
+        yield (n: number) => n * 4
+      },
+      AI.ap(async function* () {
+        yield 2
+        yield 3
+        yield 4
+      }),
+      AI.toArray
+    )(),
+    [5, 6, 7, 8, 12, 16]
+  )
+}
+
+test()
+```
+
 Added in v0.1.0
 
-## apC
+## apPar
 
 Concurrent version of `ap`, which runs the specified number of promises in parallel.
 
 **Signature**
 
 ```ts
-export declare const apC: (
+export declare const apPar: (
   concurrency: number
 ) => <A>(fa: AsyncIter<A>) => <B>(fab: AsyncIter<(a: A) => B>) => AsyncIter<B>
+```
+
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function test() {
+  assert.deepStrictEqual(
+    await pipe(
+      async function* () {
+        yield (n: number) => n + 3
+        yield (n: number) => n * 4
+      },
+      AI.apPar(2)(async function* () {
+        await delay(100)
+        yield 2
+        await delay(100)
+        yield 4
+      }),
+      AI.toArray
+    )(),
+    [5, 8, 7, 16]
+  )
+}
+
+test()
 ```
 
 Added in v0.1.0
@@ -180,14 +280,14 @@ export declare const apFirst: <B>(second: AsyncIter<B>) => <A>(first: AsyncIter<
 
 Added in v0.1.0
 
-## apFirstC
+## apFirstPar
 
 Concurrent version of `apFirst`.
 
 **Signature**
 
 ```ts
-export declare const apFirstC: (concurrency: number) => typeof apFirst
+export declare const apFirstPar: (concurrency: number) => typeof apFirst
 ```
 
 Added in v0.1.0
@@ -204,14 +304,14 @@ export declare const apSecond: <B>(second: AsyncIter<B>) => <A>(first: AsyncIter
 
 Added in v0.1.0
 
-## apSecondC
+## apSecondPar
 
 Concurrent version of `apSecond`.
 
 **Signature**
 
 ```ts
-export declare const apSecondC: (concurrency: number) => typeof apSecond
+export declare const apSecondPar: (concurrency: number) => typeof apSecond
 ```
 
 Added in v0.1.0
@@ -229,20 +329,6 @@ export declare const chainFirst: <A, B>(f: (a: A) => AsyncIter<B>) => (first: As
 
 Added in v0.1.0
 
-## chainFirstC
-
-Concurrent version of `chainFirst`.
-
-**Signature**
-
-```ts
-export declare const chainFirstC: (
-  concurrency: number
-) => <A, B>(f: (a: A) => AsyncIter<B>) => (first: AsyncIter<A>) => AsyncIter<A>
-```
-
-Added in v0.1.0
-
 ## chainFirstIOK
 
 Composes computations in sequence, using the return value of one computation
@@ -252,6 +338,18 @@ to determine the next computation and keeping only the result of the first.
 
 ```ts
 export declare const chainFirstIOK: <A, B>(f: (a: A) => IO<B>) => (first: AsyncIter<A>) => AsyncIter<A>
+```
+
+Added in v0.1.0
+
+## chainFirstPar
+
+Concurrent version of `chainFirst`.
+
+**Signature**
+
+```ts
+export declare const chainFirstPar: (concurrency: number) => typeof chainFirst
 ```
 
 Added in v0.1.0
@@ -354,7 +452,7 @@ produced `IO`.
 **Signature**
 
 ```ts
-export declare const fromIOK: <A extends readonly unknown[], B>(f: (...a: A) => IO<B>) => (...a: A) => AsyncIter<B>
+export declare const fromIOK: <A, B>(f: (...a: A) => IO<B>) => (...a: A) => AsyncIter<B>
 ```
 
 Added in v0.1.0
@@ -368,9 +466,7 @@ produced `Task`.
 **Signature**
 
 ```ts
-export declare const fromTaskK: <A extends readonly unknown[], B>(
-  f: (...a: A) => T.Task<B>
-) => (...a: A) => AsyncIter<B>
+export declare const fromTaskK: <A, B>(f: (...a: A) => T.Task<B>) => (...a: A) => AsyncIter<B>
 ```
 
 Added in v0.1.0
@@ -456,6 +552,18 @@ export declare const fromAsyncIterableK: <A extends readonly unknown[], B>(
 
 Added in v0.1.0
 
+## fromIO
+
+Return an `AsyncIter` which yields only the value of the provided `IO`.
+
+**Signature**
+
+```ts
+export declare const fromIO: NaturalTransformation11<'IO', 'AsyncIter'>
+```
+
+Added in v0.1.0
+
 ## fromIterable
 
 Returns an `AsyncIter` that yields the elements of the provided `Iterable`.
@@ -464,6 +572,19 @@ Returns an `AsyncIter` that yields the elements of the provided `Iterable`.
 
 ```ts
 export declare const fromIterable: <A>(iter: Iterable<A>) => AsyncIter<A>
+```
+
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+async function test() {
+  assert.deepStrictEqual(await pipe(AI.fromIterable(['a', 'b', 'c']), AI.toArray)(), ['a', 'b', 'c'])
+}
+
+test()
 ```
 
 Added in v0.1.0
@@ -481,9 +602,41 @@ export declare const fromIterableK: <A extends readonly unknown[], B>(
 ) => (...a: A) => AsyncIter<B>
 ```
 
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+async function test() {
+  assert.deepStrictEqual(
+    await pipe(
+      'a b c',
+      AI.fromIterableK((s) => s.split(' ')),
+      AI.toArray
+    )(),
+    ['a', 'b', 'c']
+  )
+}
+
+test()
+```
+
 Added in v0.1.0
 
-# Destructors
+## fromTask
+
+Return an `AsyncIter` which yields only the value of the provided `Task`.
+
+**Signature**
+
+```ts
+export declare const fromTask: NaturalTransformation11<'Task', 'AsyncIter'>
+```
+
+Added in v0.1.0
+
+# Conversions
 
 ## foldMap
 
@@ -535,6 +688,54 @@ export declare const toReadonlyArray: <A>(iter: AsyncIter<A>) => T.Task<readonly
 ```
 
 Added in v0.1.0
+
+# Do notation
+
+## Do
+
+**Signature**
+
+```ts
+export declare const Do: AsyncIter<{}>
+```
+
+Added in v0.1.1
+
+## apS
+
+**Signature**
+
+```ts
+export declare const apS: <N, A, B>(
+  name: Exclude<N, keyof A>,
+  fb: AsyncIter<B>
+) => (fa: AsyncIter<A>) => AsyncIter<{ readonly [K in N | keyof A]: K extends keyof A ? A[K] : B }>
+```
+
+Added in v0.1.1
+
+## bind
+
+**Signature**
+
+```ts
+export declare const bind: <N, A, B>(
+  name: Exclude<N, keyof A>,
+  f: (a: A) => AsyncIter<B>
+) => (ma: AsyncIter<A>) => AsyncIter<{ readonly [K in N | keyof A]: K extends keyof A ? A[K] : B }>
+```
+
+Added in v0.1.1
+
+## bindTo
+
+**Signature**
+
+```ts
+export declare const bindTo: <N>(name: N) => <A>(fa: AsyncIter<A>) => AsyncIter<{ readonly [K in N]: A }>
+```
+
+Added in v0.1.1
 
 # Filterable
 
@@ -595,20 +796,6 @@ export declare const partitionMap: <A, B, C>(
 
 Added in v0.1.0
 
-# FromTask
-
-## fromTask
-
-Return an `AsyncIter` which yields only the value of the provided `Task`.
-
-**Signature**
-
-```ts
-export declare const fromTask: NaturalTransformation11<'Task', 'AsyncIter'>
-```
-
-Added in v0.1.0
-
 # Functor
 
 ## map
@@ -620,6 +807,29 @@ the elements of the first `AsyncIter`.
 
 ```ts
 export declare const map: <A, B>(f: (a: A) => B) => (fa: AsyncIter<A>) => AsyncIter<B>
+```
+
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+async function test() {
+  assert.deepStrictEqual(
+    await pipe(
+      async function* () {
+        yield 2
+        yield 3
+      },
+      AI.map((a) => a * 2),
+      AI.toArray
+    )(),
+    [4, 6]
+  )
+}
+
+test()
 ```
 
 Added in v0.1.0
@@ -794,94 +1004,74 @@ export declare const Pointed: Pointed1<'AsyncIter'>
 
 Added in v0.1.0
 
-## URI
-
-**Signature**
-
-```ts
-export declare const URI: 'AsyncIter'
-```
-
-Added in v0.1.0
-
-## URI (type alias)
-
-**Signature**
-
-```ts
-export type URI = typeof URI
-```
-
-Added in v0.1.0
-
-## getApplicativeC
+## getApplicativePar
 
 Returns concurrent version of `Applicative` type class.
 
 **Signature**
 
 ```ts
-export declare const getApplicativeC: (concurrency: number) => Applicative1<URI>
+export declare const getApplicativePar: (concurrency: number) => Applicative1<URI>
 ```
 
 Added in v0.1.0
 
-## getApplyC
+## getApplyPar
 
 Returns concurrent version of `Apply` type class.
 
 **Signature**
 
 ```ts
-export declare const getApplyC: (concurrency: number) => Apply1<URI>
+export declare const getApplyPar: (concurrency: number) => Apply1<URI>
 ```
 
 Added in v0.1.0
 
-## getChainC
+## getChainPar
 
 Returns concurrent version of `Chain` type class.
 
 **Signature**
 
 ```ts
-export declare const getChainC: (concurrency: number) => Chain1<URI>
+export declare const getChainPar: (concurrency: number) => Chain1<URI>
 ```
 
 Added in v0.1.0
 
-## getMonadC
-
-Returns concurrent version of `Monad` type class.
-
-**Signature**
-
-```ts
-export declare const getMonadC: (concurrency: number) => Monad1<URI>
-```
-
-Added in v0.1.0
-
-## getMonadIOC
+## getMonadIOPar
 
 Returns concurrent version of `MonadIO` type class.
 
 **Signature**
 
 ```ts
-export declare const getMonadIOC: (concurrency: number) => MonadIO1<URI>
+export declare const getMonadIOPar: (concurrency: number) => MonadIO1<URI>
 ```
 
 Added in v0.1.0
 
-## getMonadTaskC
+## getMonadPar
+
+Returns concurrent version of `Monad` type class.
+
+**Signature**
+
+```ts
+export declare const getMonadPar: (concurrency: number) => Monad1<URI>
+```
+
+Added in v0.1.0
+
+## getMonadTaskPar
 
 Returns concurrent version of `MonadTask` type class.
 
 **Signature**
 
 ```ts
-export declare const getMonadTaskC: (concurrency: number) => MonadTask1<URI>
+export declare const getMonadTaskPar: (concurrency: number) => MonadTask1<URI>
 ```
 
 Added in v0.1.0
@@ -910,19 +1100,44 @@ export declare const getSemigroup: <A = never>() => Semigroup<AsyncIter<A>>
 
 Added in v0.1.0
 
-# Model
+# Legacy
 
-## AsyncIter (interface)
+## chainAsyncIterableK
 
 **Signature**
 
 ```ts
-export interface AsyncIter<A> {
-  (): AsyncIterable<A>
+export declare const chainAsyncIterableK: <A, B>(f: (a: A) => AsyncIterable<B>) => (iter: AsyncIter<A>) => AsyncIter<B>
+```
+
+Added in v0.1.1
+
+## chainIterableK
+
+**Signature**
+
+```ts
+export declare const chainIterableK: <A, B>(f: (a: A) => Iterable<B>) => (iter: AsyncIter<A>) => AsyncIter<B>
+```
+
+Added in v0.1.1
+
+## concurrent
+
+Returns concurrent version of the functions in the `Chain` module.
+
+**Signature**
+
+```ts
+export declare function concurrent(concurrency: number): {
+  chain: typeof chain
+  chainTaskK: typeof chainTaskK
+  chainIterableK: typeof chainIterableK
+  chainAsyncIterableK: typeof chainAsyncIterableK
 }
 ```
 
-Added in v0.1.0
+Added in v0.1.1
 
 # Monad
 
@@ -937,32 +1152,48 @@ by applying the function to the elements of the first `AsyncIter`.
 export declare const chain: <A, B>(f: (a: A) => AsyncIter<B>) => (ma: AsyncIter<A>) => AsyncIter<B>
 ```
 
+**Example**
+
+```ts
+import { pipe } from 'fp-ts/lib/function'
+import { asyncIter as AI } from 'fp-ts-iter'
+
+async function test() {
+  assert.deepStrictEqual(
+    await pipe(
+      async function* () {
+        yield 2
+        yield 3
+      },
+      AI.chain(
+        (n: number) =>
+          async function* () {
+            yield n * 2
+            yield n * 3
+            yield n * 4
+          }
+      ),
+      AI.toArray
+    )(),
+    [4, 6, 8, 6, 9, 12]
+  )
+}
+
+test()
+```
+
 Added in v0.1.0
 
-## chainC
+## chainPar
 
 Concurrent version of `chain`, which runs the specified number of promises in parallel.
 
 **Signature**
 
 ```ts
-export declare const chainC: (
+export declare const chainPar: (
   concurrency: number
 ) => <A, B>(f: (a: A) => AsyncIter<B>) => (ma: AsyncIter<A>) => AsyncIter<B>
-```
-
-Added in v0.1.0
-
-# Natural transformations
-
-## fromIO
-
-Return an `AsyncIter` which yields only the value of the provided `IO`.
-
-**Signature**
-
-```ts
-export declare const fromIO: NaturalTransformation11<'IO', 'AsyncIter'>
 ```
 
 Added in v0.1.0
