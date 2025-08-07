@@ -13,8 +13,8 @@
 import {
   either as E,
   option as O,
-  readonlyArray as RA,
   reader,
+  readonlyArray as RA,
   task as T,
 } from 'fp-ts'
 import { Alt1 } from 'fp-ts/lib/Alt'
@@ -23,14 +23,14 @@ import { Applicative1 } from 'fp-ts/lib/Applicative'
 import {
   apFirst as apFirst_,
   Apply1,
-  apS as apS_,
   apSecond as apSecond_,
+  apS as apS_,
   sequenceS,
 } from 'fp-ts/lib/Apply'
 import {
-  bind as bind_,
   Chain1,
   chainFirst as chainFirst_,
+  bind as bind_,
 } from 'fp-ts/lib/Chain'
 import { Compactable1 } from 'fp-ts/lib/Compactable'
 import { Either } from 'fp-ts/lib/Either'
@@ -61,6 +61,7 @@ import { Semigroup } from 'fp-ts/lib/Semigroup'
 import { Separated } from 'fp-ts/lib/Separated'
 import { Task } from 'fp-ts/lib/Task'
 import { Zero1 } from 'fp-ts/lib/Zero'
+import * as _ from 'fp-ts/lib/internal'
 import { Deferred } from './internal/Deferred'
 import { Subject } from './internal/Subject'
 
@@ -1240,25 +1241,25 @@ export const chainFirstTaskK =
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const Do: AsyncIter<{}> = /*#__PURE__*/ of({})
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const bindTo = /*#__PURE__*/ bindTo_(Functor)
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const bind = /*#__PURE__*/ bind_(Chain)
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const apS = /*#__PURE__*/ apS_(Apply)
@@ -1268,7 +1269,7 @@ export const apS = /*#__PURE__*/ apS_(Apply)
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export const chainIterableK: <A, B>(
@@ -1277,7 +1278,7 @@ export const chainIterableK: <A, B>(
   chain((a) => fromIterable(f(a)))
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export const chainAsyncIterableK: <A, B>(
@@ -1288,7 +1289,7 @@ export const chainAsyncIterableK: <A, B>(
 /**
  * Returns concurrent version of the functions in the `Chain` module.
  *
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export function concurrent(concurrency: number): {

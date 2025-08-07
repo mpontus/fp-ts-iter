@@ -7,7 +7,7 @@
  * type `Either<E, A>`, where `E` represents the error type and `A` represents
  * the success type.
  *
- * @since 0.1.0
+ * @since 0.1.1
  */
 import { array as A, either as E, option as O, task as T } from 'fp-ts'
 import { Alt2 } from 'fp-ts/lib/Alt'
@@ -46,7 +46,7 @@ import { AsyncIter } from './AsyncIter'
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Model
  */
 export type AsyncIterEither<E, A> = AsyncIter<Either<E, A>>
@@ -56,13 +56,13 @@ export type AsyncIterEither<E, A> = AsyncIter<Either<E, A>>
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Type lambdas
  */
 export const URI = 'AsyncIterEither'
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Type lambdas
  */
 export type URI = typeof URI
@@ -78,19 +78,19 @@ declare module 'fp-ts/lib/HKT' {
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Constructors
  */
 export const left = flow(E.left, AI.of)
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Constructors
  */
 export const right = flow(E.right, AI.of)
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Constructors
  */
 export const of = <E = never, A = never>(
@@ -98,13 +98,13 @@ export const of = <E = never, A = never>(
 ): AsyncIterEither<E, A> => fromIterable(values)
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Constructors
  */
 export const throwError: MonadThrow2<URI>['throwError'] = left
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Interop
  */
 export const tryCatch = <E, A>(
@@ -129,7 +129,7 @@ export const tryCatch = <E, A>(
   }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Interop
  */
 export const tryCatchK =
@@ -144,27 +144,45 @@ export const tryCatchK =
 // conversions
 // -------------------------------------------------------------------------------------
 
+/**
+ * @since 0.1.1
+ */
 export const fromEither: <E, A>(task: Either<E, A>) => AsyncIterEither<E, A> =
   AI.of
 
+/**
+ * @since 0.1.1
+ */
 export const fromIO: <E, A>(task: IO<A>) => AsyncIterEither<E, A> = flow(
   AI.fromIO,
   AI.map(E.right)
 )
 
+/**
+ * @since 0.1.1
+ */
 export const fromTask: <E, A>(task: Task<A>) => AsyncIterEither<E, A> = flow(
   AI.fromTask,
   AI.map(E.right)
 )
 
+/**
+ * @since 0.1.1
+ */
 export const fromTaskEither: <E, A>(
   task: TaskEither<E, A>
 ) => AsyncIterEither<E, A> = AI.fromTask
 
+/**
+ * @since 0.1.1
+ */
 export const fromIterable: <E = never, A = unknown>(
   iter: Iterable<A>
 ) => AsyncIterEither<E, A> = flow(AI.fromIterable, AI.map(E.right))
 
+/**
+ * @since 0.1.1
+ */
 export const fromAsyncIterable: <E = never, A = never>(
   iter: AsyncIterable<A>
 ) => AsyncIterEither<E, A> = flow(AI.fromAsyncIterable, AI.map(E.right))
@@ -173,31 +191,49 @@ export const fromAsyncIterable: <E = never, A = never>(
 // combinators
 // -------------------------------------------------------------------------------------
 
+/**
+ * @since 0.1.1
+ */
 export const chainW =
   <E, A, B>(f: (a: A) => AsyncIterEither<E, B>) =>
   <D>(fa: AsyncIterEither<D, A>): AsyncIterEither<E | D, B> =>
     pipe(fa, AI.chain(E.fold<D, A, AsyncIterEither<D | E, B>>(left, f)))
 
+/**
+ * @since 0.1.1
+ */
 export const chain: <E, A, B>(
   cb: (item: A) => AsyncIterEither<E, B>
 ) => (iter: AsyncIterEither<E, A>) => AsyncIterEither<E, B> = chainW
 
+/**
+ * @since 0.1.1
+ */
 export const map: <E, A, B>(
   f: (a: A) => B
 ) => (iter: AsyncIterEither<E, A>) => AsyncIterEither<E, B> = (f) =>
   AI.map(E.map(f))
 
+/**
+ * @since 0.1.1
+ */
 export const mapLeft: <E, G, A>(
   f: (a: E) => G
 ) => (iter: AsyncIterEither<E, A>) => AsyncIterEither<G, A> = (f) =>
   AI.map(E.mapLeft(f))
 
+/**
+ * @since 0.1.1
+ */
 export const apW: <D, A>(
   fa: AsyncIterEither<D, A>
 ) => <E, B>(
   fab: AsyncIterEither<E, (a: A) => B>
 ) => AsyncIterEither<E | D, B> = (fa) => chainW((f) => pipe(fa, map(f)))
 
+/**
+ * @since 0.1.1
+ */
 export const ap: <E, A>(
   fa: AsyncIterEither<E, A>
 ) => <B>(fab: AsyncIterEither<E, (a: A) => B>) => AsyncIterEither<E, B> = apW
@@ -206,10 +242,16 @@ export const ap: <E, A>(
 // lifting
 // -------------------------------------------------------------------------------------
 
+/**
+ * @since 0.1.1
+ */
 export const fromEitherK: <E, A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => Either<E, B>
 ) => (...a: A) => AsyncIterEither<E, B> = (f) => flow(f, fromEither)
 
+/**
+ * @since 0.1.1
+ */
 export const fromIOK: <E, A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => IO<B>
 ) => (...a: A) => AsyncIterEither<E, B> =
@@ -217,6 +259,9 @@ export const fromIOK: <E, A extends ReadonlyArray<unknown>, B>(
   (...a) =>
     fromIO(f(...a))
 
+/**
+ * @since 0.1.1
+ */
 export const fromTaskK: <E, A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => Task<B>
 ) => (...a: A) => AsyncIterEither<E, B> =
@@ -224,10 +269,16 @@ export const fromTaskK: <E, A extends ReadonlyArray<unknown>, B>(
   (...a) =>
     fromTask(f(...a))
 
+/**
+ * @since 0.1.1
+ */
 export const fromTaskEitherK: <E, A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => TaskEither<E, B>
 ) => (...a: A) => AsyncIterEither<E, B> = AI.fromTaskK
 
+/**
+ * @since 0.1.1
+ */
 export const fromIterableK: <E, A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => Iterable<B>
 ) => (...a: A) => AsyncIterEither<E, B> =
@@ -235,6 +286,9 @@ export const fromIterableK: <E, A extends ReadonlyArray<unknown>, B>(
   (...a) =>
     fromIterable(f(...a))
 
+/**
+ * @since 0.1.1
+ */
 export const fromAsyncIterableK: <E, A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => AsyncIterable<B>
 ) => (...a: A) => AsyncIterEither<E, B> =
@@ -242,15 +296,24 @@ export const fromAsyncIterableK: <E, A extends ReadonlyArray<unknown>, B>(
   (...a) =>
     fromAsyncIterable(f(...a))
 
+/**
+ * @since 0.1.1
+ */
 export const concatW: <D, B>(
   second: AsyncIterEither<D, B>
 ) => <E, A>(first: AsyncIterEither<E, A>) => AsyncIterEither<E | D, A | B> =
   AI.concatW
 
+/**
+ * @since 0.1.1
+ */
 export const concat: <E, A>(
   second: AsyncIterEither<E, A>
 ) => (first: AsyncIterEither<E, A>) => AsyncIterEither<E, A> = concatW
 
+/**
+ * @since 0.1.1
+ */
 export const chainFirstW: <A, D, B>(
   f: (a: A) => AsyncIterEither<D, B>
 ) => <E>(ma: AsyncIterEither<E, A>) => AsyncIterEither<E | D, A> = (f) =>
@@ -262,18 +325,30 @@ export const chainFirstW: <A, D, B>(
     )
   )
 
+/**
+ * @since 0.1.1
+ */
 export const chainFirst: <A, E, B>(
   f: (a: A) => AsyncIterEither<E, B>
 ) => (ma: AsyncIterEither<E, A>) => AsyncIterEither<E, A> = chainFirstW
 
+/**
+ * @since 0.1.1
+ */
 export const empty: AsyncIterEither<never, never> = of()
 
+/**
+ * @since 0.1.1
+ */
 export const fold: <E, A, B>(
   onLeft: (e: E) => AsyncIter<B>,
   onRight: (a: A) => AsyncIter<B>
 ) => (ma: AsyncIterEither<E, A>) => AsyncIter<B> = (onLeft, onRight) =>
   AI.chain(E.fold(onLeft, onRight))
 
+/**
+ * @since 0.1.1
+ */
 export const filter: {
   <E, A, B extends A>(refinement: Refinement<A, B>): (
     fa: AsyncIterEither<E, A>
@@ -283,15 +358,24 @@ export const filter: {
   ) => AsyncIterEither<E, A>
 } = <A>(predicate: Predicate<A>) => AI.filter(E.fold(constTrue, predicate))
 
+/**
+ * @since 0.1.1
+ */
 export const filterMap: <E, A, B>(
   f: (a: A) => Option<B>
 ) => (fa: AsyncIterEither<E, A>) => AsyncIterEither<E, B> = (f) =>
   AI.filterMap(E.fold((err) => O.some(E.left(err)), flow(f, O.map(E.right))))
 
+/**
+ * @since 0.1.1
+ */
 export const alt: <E, A>(
   that: Lazy<AsyncIterEither<E, A>>
 ) => (fa: AsyncIterEither<E, A>) => AsyncIterEither<E, A> = ET.alt(AI.Monad)
 
+/**
+ * @since 0.1.1
+ */
 export const altW: <E2, B>(
   that: Lazy<AsyncIterEither<E2, B>>
 ) => <E1, A>(fa: AsyncIterEither<E1, A>) => AsyncIterEither<E2, A | B> =
@@ -301,6 +385,9 @@ export const altW: <E2, B>(
 // utils
 // -------------------------------------------------------------------------------------
 
+/**
+ * @since 0.1.1
+ */
 export const reduce: <E, A, B>(
   b: B,
   f: (b: B, a: A) => B
@@ -317,6 +404,9 @@ export const reduce: <E, A, B>(
     )
   )
 
+/**
+ * @since 0.1.1
+ */
 export const toArray: <E, A>(
   iter: AsyncIterEither<E, A>
 ) => TaskEither<E, A[]> = flow(AI.toArray, T.map(A.array.sequence(E.either)))
@@ -338,7 +428,7 @@ const _alt: Alt2<URI>['alt'] = (fa, that) => pipe(fa, alt(that))
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Functor: Functor2<URI> = {
@@ -347,7 +437,7 @@ export const Functor: Functor2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Pointed: Pointed2<URI> = {
@@ -356,7 +446,7 @@ export const Pointed: Pointed2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Apply: Apply2<URI> = {
@@ -366,7 +456,7 @@ export const Apply: Apply2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Applicative: Applicative2<URI> = {
@@ -377,7 +467,7 @@ export const Applicative: Applicative2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Chain: Chain2<URI> = {
@@ -388,7 +478,7 @@ export const Chain: Chain2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Monad: Monad2<URI> = {
@@ -400,7 +490,7 @@ export const Monad: Monad2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const MonadIO: MonadIO2<URI> = {
@@ -413,7 +503,7 @@ export const MonadIO: MonadIO2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const MonadTask: MonadTask2<URI> = {
@@ -427,7 +517,7 @@ export const MonadTask: MonadTask2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const MonadThrow: MonadThrow2<URI> = {
@@ -440,7 +530,7 @@ export const MonadThrow: MonadThrow2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const FromEither: FromEither2<URI> = {
@@ -449,7 +539,7 @@ export const FromEither: FromEither2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const FromIO: FromIO2<URI> = {
@@ -458,7 +548,7 @@ export const FromIO: FromIO2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const FromTask: FromTask2<URI> = {
@@ -468,7 +558,7 @@ export const FromTask: FromTask2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Bifunctor: Bifunctor2<URI> = {
@@ -478,7 +568,7 @@ export const Bifunctor: Bifunctor2<URI> = {
 }
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Instances
  */
 export const Alt: Alt2<URI> = {
@@ -492,25 +582,25 @@ export const Alt: Alt2<URI> = {
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const Do: AsyncIterEither<never, {}> = /*#__PURE__*/ of({})
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const bindTo = /*#__PURE__*/ bindTo_(Functor)
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const bind = /*#__PURE__*/ bind_(Chain)
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Do notation
  */
 export const apS = /*#__PURE__*/ apS_(Apply)
@@ -520,7 +610,7 @@ export const apS = /*#__PURE__*/ apS_(Apply)
 // -------------------------------------------------------------------------------------
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export const chainEitherK: <E, A, B>(
@@ -529,7 +619,7 @@ export const chainEitherK: <E, A, B>(
   chainW(fromEitherK(f))
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export const chainTaskK: <E, A, B>(
@@ -538,7 +628,7 @@ export const chainTaskK: <E, A, B>(
   chain((a) => fromTask(f(a)))
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export const chainTaskEitherK: <E, A, B>(
@@ -547,7 +637,7 @@ export const chainTaskEitherK: <E, A, B>(
   chainW(fromTaskEitherK(f))
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export const chainIterableK: <A, B>(
@@ -556,7 +646,7 @@ export const chainIterableK: <A, B>(
   chain((a) => fromIterable(f(a)))
 
 /**
- * @since 0.1.0
+ * @since 0.1.1
  * @category Legacy
  */
 export const chainAsyncIterableK: <E, A, B>(
