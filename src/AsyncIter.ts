@@ -24,9 +24,10 @@ import {
   apFirst as apFirst_,
   Apply1,
   apSecond as apSecond_,
+  apS as apS_,
   sequenceS,
 } from 'fp-ts/lib/Apply'
-import { Chain1, chainFirst as chainFirst_ } from 'fp-ts/lib/Chain'
+import { Chain1, chainFirst as chainFirst_, bind as bind_ } from 'fp-ts/lib/Chain'
 import { Compactable1 } from 'fp-ts/lib/Compactable'
 import { Either } from 'fp-ts/lib/Either'
 import { Filterable1 } from 'fp-ts/lib/Filterable'
@@ -43,7 +44,7 @@ import {
   fromTaskK as fromTaskK_,
 } from 'fp-ts/lib/FromTask'
 import { flow, identity, Lazy, pipe } from 'fp-ts/lib/function'
-import { flap as flap_, Functor1 } from 'fp-ts/lib/Functor'
+import { bindTo as bindTo_, flap as flap_, Functor1 } from 'fp-ts/lib/Functor'
 import { Monad1 } from 'fp-ts/lib/Monad'
 import { MonadIO1 } from 'fp-ts/lib/MonadIO'
 import { MonadTask1 } from 'fp-ts/lib/MonadTask'
@@ -56,6 +57,7 @@ import { Semigroup } from 'fp-ts/lib/Semigroup'
 import { Separated } from 'fp-ts/lib/Separated'
 import { Task } from 'fp-ts/lib/Task'
 import { Zero1 } from 'fp-ts/lib/Zero'
+import * as _ from 'fp-ts/lib/internal'
 import { Deferred } from './internal/Deferred'
 import { Subject } from './internal/Subject'
 
@@ -1231,6 +1233,34 @@ export const chainTaskK =
 export const chainFirstTaskK =
   /*#__PURE__*/
   chainFirstTaskK_(FromTask, Chain)
+
+// -------------------------------------------------------------------------------------
+// do notation
+// -------------------------------------------------------------------------------------
+
+/**
+ * @category do notation
+ * @since 0.1.0
+ */
+export const Do: AsyncIter<{}> = /*#__PURE__*/ of({})
+
+/**
+ * @category do notation
+ * @since 0.1.0
+ */
+export const bindTo = /*#__PURE__*/ bindTo_(Functor)
+
+/**
+ * @category do notation
+ * @since 0.1.0
+ */
+export const bind = /*#__PURE__*/ bind_(Chain)
+
+/**
+ * @category do notation
+ * @since 0.1.0
+ */
+export const apS = /*#__PURE__*/ apS_(Apply)
 
 // -------------------------------------------------------------------------------------
 // type class members
