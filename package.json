@@ -13,7 +13,7 @@
     "@typescript-eslint/eslint-plugin": "^4.25.0",
     "@typescript-eslint/parser": "^4.25.0",
     "cspell": "^5.5.2",
-    "docs-ts": "^0.6.10",
+    "docs-ts": "^0.8.0",
     "eslint": "^7.27.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",

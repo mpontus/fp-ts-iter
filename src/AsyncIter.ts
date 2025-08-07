@@ -112,14 +112,18 @@ export const fromTask: FromTask1<URI>['fromTask'] = (ma) =>
  *   import { pipe } from 'fp-ts/lib/function'
  *   import { asyncIter as AI } from 'fp-ts-iter'
  *
- *   assert.deepStrictEqual(
- *     await pipe(
- *       'a b c',
- *       AI.fromIterableK((s) => s.split(' ')),
- *       AI.toArray
- *     )(),
- *     ['a', 'b', 'c']
- *   )
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         'a b c',
+ *         AI.fromIterableK((s) => s.split(' ')),
+ *         AI.toArray
+ *       )(),
+ *       ['a', 'b', 'c']
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const fromIterableK: <A extends ReadonlyArray<unknown>, B>(
   f: (...a: A) => Iterable<B>
@@ -141,10 +145,14 @@ export const fromIterableK: <A extends ReadonlyArray<unknown>, B>(
  *   import { pipe } from 'fp-ts/lib/function'
  *   import { asyncIter as AI } from 'fp-ts-iter'
  *
- *   assert.deepStrictEqual(
- *     await pipe(AI.fromIterable(['a', 'b', 'c']), AI.toArray)(),
- *     ['a', 'b', 'c']
- *   )
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(AI.fromIterable(['a', 'b', 'c']), AI.toArray)(),
+ *       ['a', 'b', 'c']
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const fromIterable: <A>(iter: Iterable<A>) => AsyncIter<A> =
   fromIterableK(identity)
@@ -381,17 +389,21 @@ export const zero: Zero1<URI>['zero'] = () => fromIterable([])
  *   import { pipe } from 'fp-ts/lib/function'
  *   import { asyncIter as AI } from 'fp-ts-iter'
  *
- *   assert.deepStrictEqual(
- *     await pipe(
- *       async function* () {
- *         yield 2
- *         yield 3
- *       },
- *       AI.map((a) => a * 2),
- *       AI.toArray
- *     )(),
- *     [2, 4, 6]
- *   )
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield 2
+ *           yield 3
+ *         },
+ *         AI.map((a) => a * 2),
+ *         AI.toArray
+ *       )(),
+ *       [4, 6]
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const map: <A, B>(
   f: (a: A) => B
@@ -412,21 +424,25 @@ export const map: <A, B>(
  *   import { pipe } from 'fp-ts/lib/function'
  *   import { asyncIter as AI } from 'fp-ts-iter'
  *
- *   assert.deepStrictEqual(
- *     await pipe(
- *       async function* () {
- *         yield (n: number) => n + 3
- *         yield (n: number) => n * 4
- *       },
- *       AI.ap(async function* () {
- *         yield 2
- *         yield 3
- *         yield 4
- *       }),
- *       AI.toArray
- *     )(),
- *     [5, 6, 7, 8, 12, 16]
- *   )
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield (n: number) => n + 3
+ *           yield (n: number) => n * 4
+ *         },
+ *         AI.ap(async function* () {
+ *           yield 2
+ *           yield 3
+ *           yield 4
+ *         }),
+ *         AI.toArray
+ *       )(),
+ *       [5, 6, 7, 8, 12, 16]
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const ap: <A>(
   fa: AsyncIter<A>
@@ -441,21 +457,30 @@ export const ap: <A>(
  * @category Monad
  * @example
  *   import { pipe } from 'fp-ts/lib/function'
- *   import { asyncIter as AI } from '.'
- *   pipe(
- *     async function* () {
- *       yield 2
- *       yield 3
- *     },
- *     AI.chain(
- *       (n) =>
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
  *         async function* () {
- *           yield n * 2
- *           yield n * 3
- *           yield n * 4
- *         }
+ *           yield 2
+ *           yield 3
+ *         },
+ *         AI.chain(
+ *           (n: number) =>
+ *             async function* () {
+ *               yield n * 2
+ *               yield n * 3
+ *               yield n * 4
+ *             }
+ *         ),
+ *         AI.toArray
+ *       )(),
+ *       [4, 6, 8, 6, 9, 12]
  *     )
- *   )
+ *   }
+ *
+ *   test()
  */
 export const chain: <A, B>(
   f: (a: A) => AsyncIter<B>
@@ -573,16 +598,20 @@ export const separate: Filterable1<URI>['separate'] =
  * @category Alt
  * @example
  *   import { pipe } from 'fp-ts/lib/function'
- *   import { fromIterable, altW, toArray } from 'fp-ts-iter'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
  *
- *   assert.deepStrictEqual(
- *     await pipe(
- *       fromIterable([1, 2, 3]),
- *       altW(() => fromIterable(['a', 'b', 'c'])),
- *       toArray
- *     )(),
- *     [1, 2, 3, 'a', 'b', 'c']
- *   )
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         AI.fromIterable([1, 2, 3]),
+ *         AI.altW(() => AI.fromIterable(['a', 'b', 'c'])),
+ *         AI.toArray
+ *       )(),
+ *       [1, 2, 3, 'a', 'b', 'c']
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const altW =
   <B>(that: Lazy<AsyncIter<B>>) =>
@@ -600,16 +629,20 @@ export const altW =
  * @category Alt
  * @example
  *   import { pipe } from 'fp-ts/lib/function'
- *   import { fromIterable, alt, toArray } from 'fp-ts-iter'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
  *
- *   assert.deepStrictEqual(
- *     await pipe(
- *       fromIterable([1, 2, 3]),
- *       alt(() => fromIterable([4, 5, 6])),
- *       toArray
- *     )(),
- *     [1, 2, 3, 4, 5, 6]
- *   )
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         AI.fromIterable([1, 2, 3]),
+ *         AI.alt(() => AI.fromIterable([4, 5, 6])),
+ *         AI.toArray
+ *       )(),
+ *       [1, 2, 3, 4, 5, 6]
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const alt: <A>(
   that: Lazy<AsyncIter<A>>
@@ -1022,22 +1055,26 @@ export const chainPar =
  *   const delay = (ms: number) =>
  *     new Promise((resolve) => setTimeout(resolve, ms))
  *
- *   assert.deepStrictEqual(
- *     await pipe(
- *       async function* () {
- *         yield (n: number) => n + 3
- *         yield (n: number) => n * 4
- *       },
- *       AI.apPar(2)(async function* () {
- *         await delay(100)
- *         yield 2
- *         await delay(100)
- *         yield 4
- *       }),
- *       AI.toArray
- *     )(),
- *     [5, 6, 7, 8, 12, 16]
- *   )
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield (n: number) => n + 3
+ *           yield (n: number) => n * 4
+ *         },
+ *         AI.apPar(2)(async function* () {
+ *           await delay(100)
+ *           yield 2
+ *           await delay(100)
+ *           yield 4
+ *         }),
+ *         AI.toArray
+ *       )(),
+ *       [5, 8, 7, 16]
+ *     )
+ *   }
+ *
+ *   test()
  */
 
 export const apPar =

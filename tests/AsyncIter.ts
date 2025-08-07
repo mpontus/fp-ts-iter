@@ -39,7 +39,7 @@ describe('AsyncIter', () => {
         _.ap(_.fromIterable([4, 5])),
         _.toArray
       )()
-    ).toMatchInlineSnapshot([6, 7, 7, 8, 8, 10, 12, 15])
+    ).toEqual([6, 7, 7, 8, 8, 10, 12, 15])
   })
 
   it('ap', async () => {
@@ -258,7 +258,7 @@ describe('AsyncIter', () => {
         _.fromTaskK((n) => T.of(n + 4)),
         _.toArray
       )()
-    ).toEqual([7])
+    ).toEqual([6])
   })
 
   it('chainTaskK', async () => {

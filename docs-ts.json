@@ -1,3 +1,11 @@
 {
-    "exclude": ["src/index.ts", "src/internal/*"]
+  "parseCompilerOptions": {
+    "target": "es2017",
+    "module": "esnext"
+  },
+  "examplesCompilerOptions": {
+    "target": "es2017",
+    "module": "esnext"
+  },
+  "exclude": ["src/index.ts", "src/internal/*"]
 }
