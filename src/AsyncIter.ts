@@ -73,14 +73,14 @@ export interface AsyncIter<A> {
 }
 
 // -------------------------------------------------------------------------------------
-// natural transformations
+// constructors
 // -------------------------------------------------------------------------------------
 
 /**
  * Return an `AsyncIter` which yields only the value of the provided `IO`.
  *
  * @since 0.1.0
- * @category Natural transformations
+ * @category Constructors
  */
 export const fromIO: FromIO1<URI>['fromIO'] = (ma) =>
   async function* () {
@@ -91,16 +91,12 @@ export const fromIO: FromIO1<URI>['fromIO'] = (ma) =>
  * Return an `AsyncIter` which yields only the value of the provided `Task`.
  *
  * @since 0.1.0
- * @category FromTask
+ * @category Constructors
  */
 export const fromTask: FromTask1<URI>['fromTask'] = (ma) =>
   async function* () {
     yield await ma()
   }
-
-// -------------------------------------------------------------------------------------
-// constructors
-// -------------------------------------------------------------------------------------
 
 /**
  * Returns a function that passes its arguments to the provided constructor and
@@ -184,15 +180,31 @@ export const fromAsyncIterableK: <A extends ReadonlyArray<unknown>, B>(
 export const fromAsyncIterable: <A>(iter: AsyncIterable<A>) => AsyncIter<A> =
   fromAsyncIterableK(identity)
 
+/**
+ * Returns an `AsyncIter` containing only the provided value.
+ *
+ * @since 0.1.0
+ * @category Pointed
+ */
+export const of: Pointed1<URI>['of'] = flow(RA.of, fromIterable)
+
+/**
+ * Returns a constructor for an empty `AsyncIter`.
+ *
+ * @since 0.1.0
+ * @category Zero
+ */
+export const zero: Zero1<URI>['zero'] = () => fromIterable([])
+
 // -------------------------------------------------------------------------------------
-// destructors
+// conversions
 // -------------------------------------------------------------------------------------
 
 /**
  * Returns a `Task` of readonly array containing the elements of the provided `AsyncIter`.
  *
  * @since 0.1.0
- * @category Destructors
+ * @category Conversions
  */
 export const toReadonlyArray: <A>(
   iter: AsyncIter<A>
@@ -207,7 +219,7 @@ export const toReadonlyArray: <A>(
  * Returns a `Task` of array containing the elements of the provided `AsyncIter`.
  *
  * @since 0.1.0
- * @category Destructors
+ * @category Conversions
  */
 export const toArray: <A>(as: AsyncIter<A>) => Task<Array<A>> = flow(
   toReadonlyArray,
@@ -219,7 +231,7 @@ export const toArray: <A>(as: AsyncIter<A>) => Task<Array<A>> = flow(
  * function to the elements of the `AsyncIter`.
  *
  * @since 0.1.0
- * @category Destructors
+ * @category Conversions
  */
 export const foldMap: <M>(
   M: Monoid<M>
@@ -238,7 +250,7 @@ export const foldMap: <M>(
  * call, starting with the initial value.
  *
  * @since 0.1.0
- * @category Destructors
+ * @category Conversions
  */
 export const reduce: <A, B>(
   b: B,
@@ -334,50 +346,6 @@ export const concatW =
 export const concat: <A>(
   second: AsyncIter<A>
 ) => (first: AsyncIter<A>) => AsyncIter<A> = concatW
-
-// -------------------------------------------------------------------------------------
-// non-pipeables
-// -------------------------------------------------------------------------------------
-
-const _map: Functor1<URI>['map'] = (fa, f) => pipe(fa, map(f))
-const _ap: Apply1<URI>['ap'] = (fab, fa) => pipe(fab, ap(fa))
-const _chain: Chain1<URI>['chain'] = (ma, f) => pipe(ma, chain(f))
-const _filter: Filterable1<URI>['filter'] = <A>(
-  fa: AsyncIter<A>,
-  predicate: Predicate<A>
-) => pipe(fa, filter(predicate))
-/* istanbul ignore next */
-const _filterMap: Filterable1<URI>['filterMap'] = (fa, f) =>
-  pipe(fa, filterMap(f))
-/* istanbul ignore next */
-const _partition: Filterable1<URI>['partition'] = <A>(
-  fa: AsyncIter<A>,
-  predicate: Predicate<A>
-) => pipe(fa, partition(predicate))
-/* istanbul ignore next */
-const _partitionMap: Filterable1<URI>['partitionMap'] = (fa, f) =>
-  pipe(fa, partitionMap(f))
-const _alt: Alt1<URI>['alt'] = (fa, that) => pipe(fa, alt(that))
-
-// -------------------------------------------------------------------------------------
-// type class members
-// -------------------------------------------------------------------------------------
-
-/**
- * Returns an `AsyncIter` containing only the provided value.
- *
- * @since 0.1.0
- * @category Pointed
- */
-export const of: Pointed1<URI>['of'] = flow(RA.of, fromIterable)
-
-/**
- * Returns a constructor for an empty `AsyncIter`.
- *
- * @since 0.1.0
- * @category Zero
- */
-export const zero: Zero1<URI>['zero'] = () => fromIterable([])
 
 /**
  * Returns an `AsyncIter` that yields the results of applying the function to
@@ -647,6 +615,283 @@ export const altW =
 export const alt: <A>(
   that: Lazy<AsyncIter<A>>
 ) => (fa: AsyncIter<A>) => AsyncIter<A> = altW
+
+// -------------------------------------------------------------------------------------
+// concurrency
+// -------------------------------------------------------------------------------------
+
+/**
+ * Concurrent version of `chain`, which runs the specified number of promises in parallel.
+ *
+ * @since 0.1.0
+ * @category Monad
+ */
+export const chainPar =
+  (concurrency: number) =>
+  <A, B>(f: (a: A) => AsyncIter<B>) =>
+  (ma: AsyncIter<A>): AsyncIter<B> =>
+  () => {
+    const subject = new Subject<B>()
+    let deferred = new Deferred<void>()
+    let running = 0
+    let isComplete = false
+    ;(async () => {
+      for await (const a of ma()) {
+        const mb = f(a)
+
+        if (++running >= concurrency) {
+          deferred = new Deferred()
+        }
+
+        ;(async () => {
+          for await (const b of mb()) {
+            subject.onNext(b)
+          }
+
+          if (--running < concurrency) {
+            deferred.onResolve()
+          }
+
+          if (isComplete && running == 0) {
+            subject.onReturn()
+          }
+        })()
+
+        await deferred
+      }
+
+      if (running == 0) {
+        subject.onReturn()
+      }
+
+      isComplete = true
+    })()
+
+    deferred.onResolve()
+
+    return subject
+  }
+
+/**
+ * Concurrent version of `ap`, which runs the specified number of promises in parallel.
+ *
+ * @since 0.1.0
+ * @category Apply
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   const delay = (ms: number) =>
+ *     new Promise((resolve) => setTimeout(resolve, ms))
+ *
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield (n: number) => n + 3
+ *           yield (n: number) => n * 4
+ *         },
+ *         AI.apPar(2)(async function* () {
+ *           await delay(100)
+ *           yield 2
+ *           await delay(100)
+ *           yield 4
+ *         }),
+ *         AI.toArray
+ *       )(),
+ *       [5, 8, 7, 16]
+ *     )
+ *   }
+ *
+ *   test()
+ */
+
+export const apPar =
+  (concurrency: number) =>
+  <A>(fa: AsyncIter<A>) =>
+  <B>(fab: AsyncIter<(a: A) => B>): AsyncIter<B> =>
+    pipe(
+      fab,
+      chainPar(concurrency)((f) => pipe(fa, map(f)))
+    )
+
+const _apPar =
+  (concurrency: number): Apply1<URI>['ap'] =>
+  (fab, fa) =>
+    apPar(concurrency)(fa)(fab)
+const _chainPar =
+  (concurrency: number): Chain1<URI>['chain'] =>
+  (fa, f) =>
+    chainPar(concurrency)(f)(fa)
+
+/**
+ * Returns concurrent version of `Apply` type class.
+ *
+ * @since 0.1.0
+ * @category Instances
+ */
+export const getApplyPar = (concurrency: number): Apply1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apPar(concurrency),
+})
+
+/**
+ * Concurrent version of `apFirst`.
+ *
+ * @since 0.1.0
+ * @category Combinators
+ */
+export const apFirstPar = (concurrency: number): typeof apFirst =>
+  /*#__PURE__*/
+  apFirst_(getApplyPar(concurrency))
+
+/**
+ * Concurrent version of `apSecond`.
+ *
+ * @since 0.1.0
+ * @category Combinators
+ */
+export const apSecondPar = (concurrency: number): typeof apSecond =>
+  /*#__PURE__*/
+  apSecond_(getApplyPar(concurrency))
+
+/**
+ * Returns concurrent version of `Applicative` type class.
+ *
+ * @since 0.1.0
+ * @category Instances
+ */
+export const getApplicativePar = (concurrency: number): Applicative1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apPar(concurrency),
+  of,
+})
+
+/**
+ * Returns concurrent version of `Chain` type class.
+ *
+ * @since 0.1.0
+ * @category Instances
+ */
+export const getChainPar = (concurrency: number): Chain1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
+})
+
+/**
+ * Concurrent version of `chainFirst`.
+ *
+ * @since 0.1.0
+ * @category Combinators
+ */
+export const chainFirstPar = (concurrency: number): typeof chainFirst =>
+  chainFirst_(getChainPar(concurrency))
+
+/**
+ * Returns concurrent version of `Monad` type class.
+ *
+ * @since 0.1.0
+ * @category Instances
+ */
+export const getMonadPar = (concurrency: number): Monad1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
+  of,
+})
+
+/**
+ * Returns concurrent version of `MonadIO` type class.
+ *
+ * @since 0.1.0
+ * @category Instances
+ */
+export const getMonadIOPar = (concurrency: number): MonadIO1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
+  of,
+  fromIO,
+})
+
+/**
+ * Returns concurrent version of `MonadTask` type class.
+ *
+ * @since 0.1.0
+ * @category Instances
+ */
+export const getMonadTaskPar = (concurrency: number): MonadTask1<URI> => ({
+  URI,
+  map: _map,
+  ap: _apPar(concurrency),
+  chain: _chainPar(concurrency),
+  of,
+  fromIO,
+  fromTask,
+})
+
+
+
+// -------------------------------------------------------------------------------------
+// utils
+// -------------------------------------------------------------------------------------
+
+/**
+ * An empty instance
+ *
+ * @since 0.1.0
+ */
+export const empty: AsyncIter<never> = fromIterable([])
+
+/**
+ * Replay emitted values for each subscriber
+ *
+ * @since 0.1.0
+ * @category Combinators
+ */
+export function replay<A>(iter: AsyncIter<A>): AsyncIter<A> {
+  let subject: Subject<A>
+
+  return async function* () {
+    const source = subject ?? iter()
+    const dest = (subject = new Subject())
+    for await (const item of source) {
+      dest.onNext(item)
+      yield item
+    }
+    dest.onReturn()
+  }
+}
+
+// -------------------------------------------------------------------------------------
+// non-pipeables
+// -------------------------------------------------------------------------------------
+
+const _map: Functor1<URI>['map'] = (fa, f) => pipe(fa, map(f))
+const _ap: Apply1<URI>['ap'] = (fab, fa) => pipe(fab, ap(fa))
+const _chain: Chain1<URI>['chain'] = (ma, f) => pipe(ma, chain(f))
+const _filter: Filterable1<URI>['filter'] = <A>(
+  fa: AsyncIter<A>,
+  predicate: Predicate<A>
+) => pipe(fa, filter(predicate))
+/* istanbul ignore next */
+const _filterMap: Filterable1<URI>['filterMap'] = (fa, f) =>
+  pipe(fa, filterMap(f))
+/* istanbul ignore next */
+const _partition: Filterable1<URI>['partition'] = <A>(
+  fa: AsyncIter<A>,
+  predicate: Predicate<A>
+) => pipe(fa, partition(predicate))
+/* istanbul ignore next */
+const _partitionMap: Filterable1<URI>['partitionMap'] = (fa, f) =>
+  pipe(fa, partitionMap(f))
+const _alt: Alt1<URI>['alt'] = (fa, that) => pipe(fa, alt(that))
 
 // -------------------------------------------------------------------------------------
 // instances
@@ -988,252 +1233,5 @@ export const chainFirstTaskK =
   chainFirstTaskK_(FromTask, Chain)
 
 // -------------------------------------------------------------------------------------
-// concurrency
+// type class members
 // -------------------------------------------------------------------------------------
-
-/**
- * Concurrent version of `chain`, which runs the specified number of promises in parallel.
- *
- * @since 0.1.0
- * @category Monad
- */
-export const chainPar =
-  (concurrency: number) =>
-  <A, B>(f: (a: A) => AsyncIter<B>) =>
-  (ma: AsyncIter<A>): AsyncIter<B> =>
-  () => {
-    const subject = new Subject<B>()
-    let deferred = new Deferred<void>()
-    let running = 0
-    let isComplete = false
-    ;(async () => {
-      for await (const a of ma()) {
-        const mb = f(a)
-
-        if (++running >= concurrency) {
-          deferred = new Deferred()
-        }
-
-        ;(async () => {
-          for await (const b of mb()) {
-            subject.onNext(b)
-          }
-
-          if (--running < concurrency) {
-            deferred.onResolve()
-          }
-
-          if (isComplete && running == 0) {
-            subject.onReturn()
-          }
-        })()
-
-        await deferred
-      }
-
-      if (running == 0) {
-        subject.onReturn()
-      }
-
-      isComplete = true
-    })()
-
-    deferred.onResolve()
-
-    return subject
-  }
-
-/**
- * Concurrent version of `ap`, which runs the specified number of promises in parallel.
- *
- * @since 0.1.0
- * @category Apply
- * @example
- *   import { pipe } from 'fp-ts/lib/function'
- *   import { asyncIter as AI } from 'fp-ts-iter'
- *
- *   const delay = (ms: number) =>
- *     new Promise((resolve) => setTimeout(resolve, ms))
- *
- *   async function test() {
- *     assert.deepStrictEqual(
- *       await pipe(
- *         async function* () {
- *           yield (n: number) => n + 3
- *           yield (n: number) => n * 4
- *         },
- *         AI.apPar(2)(async function* () {
- *           await delay(100)
- *           yield 2
- *           await delay(100)
- *           yield 4
- *         }),
- *         AI.toArray
- *       )(),
- *       [5, 8, 7, 16]
- *     )
- *   }
- *
- *   test()
- */
-
-export const apPar =
-  (concurrency: number) =>
-  <A>(fa: AsyncIter<A>) =>
-  <B>(fab: AsyncIter<(a: A) => B>): AsyncIter<B> =>
-    pipe(
-      fab,
-      chainPar(concurrency)((f) => pipe(fa, map(f)))
-    )
-
-const _apPar =
-  (concurrency: number): Apply1<URI>['ap'] =>
-  (fab, fa) =>
-    apPar(concurrency)(fa)(fab)
-const _chainPar =
-  (concurrency: number): Chain1<URI>['chain'] =>
-  (fa, f) =>
-    chainPar(concurrency)(f)(fa)
-
-/**
- * Returns concurrent version of `Apply` type class.
- *
- * @since 0.1.0
- * @category Instances
- */
-export const getApplyPar = (concurrency: number): Apply1<URI> => ({
-  URI,
-  map: _map,
-  ap: _apPar(concurrency),
-})
-
-/**
- * Concurrent version of `apFirst`.
- *
- * @since 0.1.0
- * @category Combinators
- */
-export const apFirstPar = (concurrency: number): typeof apFirst =>
-  /*#__PURE__*/
-  apFirst_(getApplyPar(concurrency))
-
-/**
- * Concurrent version of `apSecond`.
- *
- * @since 0.1.0
- * @category Combinators
- */
-export const apSecondPar = (concurrency: number): typeof apSecond =>
-  /*#__PURE__*/
-  apSecond_(getApplyPar(concurrency))
-
-/**
- * Returns concurrent version of `Applicative` type class.
- *
- * @since 0.1.0
- * @category Instances
- */
-export const getApplicativePar = (concurrency: number): Applicative1<URI> => ({
-  URI,
-  map: _map,
-  ap: _apPar(concurrency),
-  of,
-})
-
-/**
- * Returns concurrent version of `Chain` type class.
- *
- * @since 0.1.0
- * @category Instances
- */
-export const getChainPar = (concurrency: number): Chain1<URI> => ({
-  URI,
-  map: _map,
-  ap: _apPar(concurrency),
-  chain: _chainPar(concurrency),
-})
-
-/**
- * Concurrent version of `chainFirst`.
- *
- * @since 0.1.0
- * @category Combinators
- */
-export const chainFirstPar = (concurrency: number): typeof chainFirst =>
-  chainFirst_(getChainPar(concurrency))
-
-/**
- * Returns concurrent version of `Monad` type class.
- *
- * @since 0.1.0
- * @category Instances
- */
-export const getMonadPar = (concurrency: number): Monad1<URI> => ({
-  URI,
-  map: _map,
-  ap: _apPar(concurrency),
-  chain: _chainPar(concurrency),
-  of,
-})
-
-/**
- * Returns concurrent version of `MonadIO` type class.
- *
- * @since 0.1.0
- * @category Instances
- */
-export const getMonadIOPar = (concurrency: number): MonadIO1<URI> => ({
-  URI,
-  map: _map,
-  ap: _apPar(concurrency),
-  chain: _chainPar(concurrency),
-  of,
-  fromIO,
-})
-
-/**
- * Returns concurrent version of `MonadTask` type class.
- *
- * @since 0.1.0
- * @category Instances
- */
-export const getMonadTaskPar = (concurrency: number): MonadTask1<URI> => ({
-  URI,
-  map: _map,
-  ap: _apPar(concurrency),
-  chain: _chainPar(concurrency),
-  of,
-  fromIO,
-  fromTask,
-})
-
-// -------------------------------------------------------------------------------------
-// utils
-// -------------------------------------------------------------------------------------
-
-/**
- * An empty instance
- *
- * @since 0.1.0
- */
-export const empty: AsyncIter<never> = fromIterable([])
-
-/**
- * Replay emitted values for each subscriber
- *
- * @since 0.1.0
- * @category Combinators
- */
-export function replay<A>(iter: AsyncIter<A>): AsyncIter<A> {
-  let subject: Subject<A>
-
-  return async function* () {
-    const source = subject ?? iter()
-    const dest = (subject = new Subject())
-    for await (const item of source) {
-      dest.onNext(item)
-      yield item
-    }
-    dest.onReturn()
-  }
-}
