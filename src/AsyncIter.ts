@@ -13,8 +13,8 @@
 import {
   either as E,
   option as O,
-  reader,
   readonlyArray as RA,
+  reader,
   task as T,
 } from 'fp-ts'
 import { Alt1 } from 'fp-ts/lib/Alt'
@@ -23,14 +23,14 @@ import { Applicative1 } from 'fp-ts/lib/Applicative'
 import {
   apFirst as apFirst_,
   Apply1,
-  apSecond as apSecond_,
   apS as apS_,
+  apSecond as apSecond_,
   sequenceS,
 } from 'fp-ts/lib/Apply'
 import {
+  bind as bind_,
   Chain1,
   chainFirst as chainFirst_,
-  bind as bind_,
 } from 'fp-ts/lib/Chain'
 import { Compactable1 } from 'fp-ts/lib/Compactable'
 import { Either } from 'fp-ts/lib/Either'
@@ -61,7 +61,6 @@ import { Semigroup } from 'fp-ts/lib/Semigroup'
 import { Separated } from 'fp-ts/lib/Separated'
 import { Task } from 'fp-ts/lib/Task'
 import { Zero1 } from 'fp-ts/lib/Zero'
-import * as _ from 'fp-ts/lib/internal'
 import { Deferred } from './internal/Deferred'
 import { Subject } from './internal/Subject'
 

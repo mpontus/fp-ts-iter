@@ -9,37 +9,26 @@
  *
  * @since 0.1.0
  */
+import { array as A, either as E, option as O, task as T } from 'fp-ts'
 import { Alt2 } from 'fp-ts/lib/Alt'
 import { Applicative2 } from 'fp-ts/lib/Applicative'
-import {
-  Apply2,
-  apFirst as apFirst_,
-  apSecond as apSecond_,
-  apS as apS_,
-} from 'fp-ts/lib/Apply'
+import { Apply2, apS as apS_ } from 'fp-ts/lib/Apply'
 import { Bifunctor2 } from 'fp-ts/lib/Bifunctor'
-import {
-  Chain2,
-  bind as bind_,
-  chainFirst as chainFirst_,
-} from 'fp-ts/lib/Chain'
+import { bind as bind_, Chain2 } from 'fp-ts/lib/Chain'
 import { Either } from 'fp-ts/lib/Either'
 import * as ET from 'fp-ts/lib/EitherT'
-import { FromEither2, fromEitherK as fromEitherK_ } from 'fp-ts/lib/FromEither'
-import { FromIO2, fromIOK as fromIOK_ } from 'fp-ts/lib/FromIO'
-import { FromTask2, fromTaskK as fromTaskK_ } from 'fp-ts/lib/FromTask'
+import { FromEither2 } from 'fp-ts/lib/FromEither'
+import { FromIO2 } from 'fp-ts/lib/FromIO'
+import { FromTask2 } from 'fp-ts/lib/FromTask'
 import {
   constTrue,
   flow,
-  identity,
   Lazy,
   pipe,
   Predicate,
   Refinement,
-  tuple,
 } from 'fp-ts/lib/function'
-import { bindTo as bindTo_, flap as flap_, Functor2 } from 'fp-ts/lib/Functor'
-import * as _ from 'fp-ts/lib/internal'
+import { bindTo as bindTo_, Functor2 } from 'fp-ts/lib/Functor'
 import { IO } from 'fp-ts/lib/IO'
 import { Monad2 } from 'fp-ts/lib/Monad'
 import { MonadIO2 } from 'fp-ts/lib/MonadIO'
@@ -47,12 +36,10 @@ import { MonadTask2 } from 'fp-ts/lib/MonadTask'
 import { MonadThrow2 } from 'fp-ts/lib/MonadThrow'
 import { Option } from 'fp-ts/lib/Option'
 import { Pointed2 } from 'fp-ts/lib/Pointed'
-import { Semigroup } from 'fp-ts/lib/Semigroup'
 import { Task } from 'fp-ts/lib/Task'
 import { TaskEither } from 'fp-ts/lib/TaskEither'
 import * as AI from './AsyncIter'
 import { AsyncIter } from './AsyncIter'
-import { array as A, either as E, option as O, task as T } from 'fp-ts'
 
 // -------------------------------------------------------------------------------------
 // model
