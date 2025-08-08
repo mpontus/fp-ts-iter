@@ -227,6 +227,20 @@ export const toReadonlyArray: <A>(
  *
  * @since 0.1.0
  * @category Conversions
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     const result = await pipe(async function* () {
+ *       yield 1
+ *       yield 2
+ *       yield 3
+ *     }, AI.toArray)()
+ *     assert.deepStrictEqual(result, [1, 2, 3])
+ *   }
+ *
+ *   test()
  */
 export const toArray: <A>(as: AsyncIter<A>) => Task<Array<A>> = flow(
   toReadonlyArray,
@@ -337,6 +351,28 @@ async function* _concat<A>(iterables: AsyncIterable<A>[]): AsyncIterable<A> {
  *
  * @since 0.1.0
  * @category Combinators
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield 1
+ *           yield 2
+ *         },
+ *         AI.concatW(async function* () {
+ *           yield 'a'
+ *           yield 'b'
+ *         }),
+ *         AI.toArray
+ *       )(),
+ *       [1, 2, 'a', 'b']
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const concatW =
   <B>(second: AsyncIter<B>) =>
@@ -474,6 +510,31 @@ export const chain: <A, B>(
  *
  * @since 0.1.0
  * @category Combinators
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield async function* () {
+ *             yield 1
+ *             yield 2
+ *           }
+ *           yield async function* () {
+ *             yield 3
+ *             yield 4
+ *           }
+ *         },
+ *         AI.flatten,
+ *         AI.toArray
+ *       )(),
+ *       [1, 2, 3, 4]
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const flatten: <A>(mma: AsyncIter<AsyncIter<A>>) => AsyncIter<A> =
   /*#__PURE__*/
@@ -484,6 +545,33 @@ export const flatten: <A>(mma: AsyncIter<AsyncIter<A>>) => AsyncIter<A> =
  *
  * @since 0.1.0
  * @category Filterable
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { option as O } from 'fp-ts'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     const parseNumber = (s: string) => {
+ *       const n = parseInt(s, 10)
+ *       return isNaN(n) ? O.none : O.some(n)
+ *     }
+ *
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield '1'
+ *           yield 'invalid'
+ *           yield '3'
+ *           yield '4'
+ *         },
+ *         AI.filterMap(parseNumber),
+ *         AI.toArray
+ *       )(),
+ *       [1, 3, 4]
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const filterMap: <A, B>(
   f: (a: A) => Option<B>
@@ -503,6 +591,32 @@ export const filterMap: <A, B>(
  *
  * @since 0.1.0
  * @category Filterable
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { either as E } from 'fp-ts'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     const parseNumber = (s: string) => {
+ *       const n = parseInt(s, 10)
+ *       return isNaN(n) ? E.left(s) : E.right(n)
+ *     }
+ *
+ *     const result = pipe(async function* () {
+ *       yield '1'
+ *       yield 'invalid'
+ *       yield '3'
+ *       yield 'bad'
+ *     }, AI.partitionMap(parseNumber))
+ *
+ *     assert.deepStrictEqual(await AI.toArray(result.left)(), [
+ *       'invalid',
+ *       'bad',
+ *     ])
+ *     assert.deepStrictEqual(await AI.toArray(result.right)(), [1, 3])
+ *   }
+ *
+ *   test()
  */
 export const partitionMap =
   <A, B, C>(f: (a: A) => Either<B, C>) =>
@@ -521,6 +635,28 @@ export const partitionMap =
  *
  * @since 0.1.0
  * @category Filterable
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield 1
+ *           yield 2
+ *           yield 3
+ *           yield 4
+ *           yield 5
+ *         },
+ *         AI.filter((n) => n % 2 === 0),
+ *         AI.toArray
+ *       )(),
+ *       [2, 4]
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const filter: {
   <A, B extends A>(refinement: Refinement<A, B>): (
@@ -534,6 +670,27 @@ export const filter: {
  *
  * @since 0.1.0
  * @category Filterable
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     const result = pipe(
+ *       async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *         yield 4
+ *         yield 5
+ *       },
+ *       AI.partition((n) => n % 2 === 0)
+ *     )
+ *
+ *     assert.deepStrictEqual(await AI.toArray(result.left)(), [1, 3, 5])
+ *     assert.deepStrictEqual(await AI.toArray(result.right)(), [2, 4])
+ *   }
+ *
+ *   test()
  */
 export const partition: {
   <A, B extends A>(refinement: Refinement<A, B>): (
@@ -550,6 +707,29 @@ export const partition: {
  *
  * @since 0.1.0
  * @category Compactable
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { option as O } from 'fp-ts'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.deepStrictEqual(
+ *       await pipe(
+ *         async function* () {
+ *           yield O.some(1)
+ *           yield O.none
+ *           yield O.some(3)
+ *           yield O.none
+ *           yield O.some(5)
+ *         },
+ *         AI.compact,
+ *         AI.toArray
+ *       )(),
+ *       [1, 3, 5]
+ *     )
+ *   }
+ *
+ *   test()
  */
 export const compact: Filterable1<URI>['compact'] =
   /*#__PURE__*/
@@ -560,6 +740,28 @@ export const compact: Filterable1<URI>['compact'] =
  *
  * @since 0.1.0
  * @category Compactable
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { either as E } from 'fp-ts'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     const result = pipe(async function* () {
+ *       yield E.right(1)
+ *       yield E.left('error1')
+ *       yield E.right(3)
+ *       yield E.left('error2')
+ *       yield E.right(5)
+ *     }, AI.separate)
+ *
+ *     assert.deepStrictEqual(await AI.toArray(result.left)(), [
+ *       'error1',
+ *       'error2',
+ *     ])
+ *     assert.deepStrictEqual(await AI.toArray(result.right)(), [1, 3, 5])
+ *   }
+ *
+ *   test()
  */
 export const separate: Filterable1<URI>['separate'] =
   /*#__PURE__*/
@@ -568,110 +770,136 @@ export const separate: Filterable1<URI>['separate'] =
 /**
  * Test whether a value is an element of an async iterator.
  *
- * @example
- * import { asyncIter as AI } from 'fp-ts-iter'
- * import { eqNumber } from 'fp-ts/lib/Eq'
- *
- * async function test() {
- *   assert.strictEqual(
- *     await AI.elem(eqNumber)(2)(async function* () { yield 1; yield 2; yield 3 })(),
- *     true
- *   )
- *   assert.strictEqual(
- *     await AI.elem(eqNumber)(4)(async function* () { yield 1; yield 2; yield 3 })(),
- *     false
- *   )
- * }
- *
- * test()
- *
- * @category Combinators
  * @since 0.1.0
+ * @category Combinators
+ * @example
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *   import { eqNumber } from 'fp-ts/lib/Eq'
+ *
+ *   async function test() {
+ *     assert.strictEqual(
+ *       await AI.elem(eqNumber)(2)(async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *       })(),
+ *       true
+ *     )
+ *     assert.strictEqual(
+ *       await AI.elem(eqNumber)(4)(async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *       })(),
+ *       false
+ *     )
+ *   }
+ *
+ *   test()
  */
-export const elem: <A>(E: Eq<A>) => (a: A) => (iter: AsyncIter<A>) => Task<boolean> =
-  (E) => (a) => (iter) =>
-    async () => {
-      for await (const value of iter()) {
-        if (E.equals(a, value)) {
-          return true
-        }
+export const elem: <A>(
+  E: Eq<A>
+) => (a: A) => (iter: AsyncIter<A>) => Task<boolean> =
+  (E) => (a) => (iter) => async () => {
+    for await (const value of iter()) {
+      if (E.equals(a, value)) {
+        return true
       }
-      return false
     }
+    return false
+  }
 
 /**
  * Check if any element in an async iterator satisfies a predicate.
  *
- * @example
- * import { asyncIter as AI } from 'fp-ts-iter'
- *
- * async function test() {
- *   assert.strictEqual(
- *     await AI.exists((n: number) => n > 2)(async function* () { yield 1; yield 2; yield 3 })(),
- *     true
- *   )
- *   assert.strictEqual(
- *     await AI.exists((n: number) => n > 5)(async function* () { yield 1; yield 2; yield 3 })(),
- *     false
- *   )
- * }
- *
- * test()
- *
- * @category Combinators
  * @since 0.1.0
+ * @category Combinators
+ * @example
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.strictEqual(
+ *       await AI.exists((n: number) => n > 2)(async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *       })(),
+ *       true
+ *     )
+ *     assert.strictEqual(
+ *       await AI.exists((n: number) => n > 5)(async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *       })(),
+ *       false
+ *     )
+ *   }
+ *
+ *   test()
  */
-export const exists: <A>(predicate: Predicate<A>) => (iter: AsyncIter<A>) => Task<boolean> =
-  (predicate) => (iter) =>
-    async () => {
-      for await (const value of iter()) {
-        if (predicate(value)) {
-          return true
-        }
+export const exists: <A>(
+  predicate: Predicate<A>
+) => (iter: AsyncIter<A>) => Task<boolean> =
+  (predicate) => (iter) => async () => {
+    for await (const value of iter()) {
+      if (predicate(value)) {
+        return true
       }
-      return false
     }
+    return false
+  }
 
 /**
  * Alias for `exists`.
  *
- * @category Combinators
  * @since 0.1.0
+ * @category Combinators
  */
-export const some: <A>(predicate: Predicate<A>) => (iter: AsyncIter<A>) => Task<boolean> = exists
+export const some: <A>(
+  predicate: Predicate<A>
+) => (iter: AsyncIter<A>) => Task<boolean> = exists
 
 /**
  * Check if all elements in an async iterator satisfy a predicate.
  *
- * @example
- * import { asyncIter as AI } from 'fp-ts-iter'
- *
- * async function test() {
- *   assert.strictEqual(
- *     await AI.every((n: number) => n > 0)(async function* () { yield 1; yield 2; yield 3 })(),
- *     true
- *   )
- *   assert.strictEqual(
- *     await AI.every((n: number) => n > 2)(async function* () { yield 1; yield 2; yield 3 })(),
- *     false
- *   )
- * }
- *
- * test()
- *
- * @category Combinators
  * @since 0.1.0
+ * @category Combinators
+ * @example
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.strictEqual(
+ *       await AI.every((n: number) => n > 0)(async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *       })(),
+ *       true
+ *     )
+ *     assert.strictEqual(
+ *       await AI.every((n: number) => n > 2)(async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *       })(),
+ *       false
+ *     )
+ *   }
+ *
+ *   test()
  */
-export const every: <A>(predicate: Predicate<A>) => (iter: AsyncIter<A>) => Task<boolean> =
-  (predicate) => (iter) =>
-    async () => {
-      for await (const value of iter()) {
-        if (!predicate(value)) {
-          return false
-        }
+export const every: <A>(
+  predicate: Predicate<A>
+) => (iter: AsyncIter<A>) => Task<boolean> =
+  (predicate) => (iter) => async () => {
+    for await (const value of iter()) {
+      if (!predicate(value)) {
+        return false
       }
-      return true
     }
+    return true
+  }
 
 /**
  * Returns an `AsyncIter` that yields elements of the first `AsyncIter` followed
@@ -738,20 +966,25 @@ export const alt: <A>(
 /**
  * Test whether an async iterator is empty
  *
- * @example
- * import { asyncIter as AI } from 'fp-ts-iter'
- *
- * async function test() {
- *   assert.strictEqual(await AI.isEmpty(async function* () {})(), true)
- *   assert.strictEqual(await AI.isEmpty(async function* () { yield 1 })(), false)
- * }
- *
- * test()
- *
- * @category refinements
  * @since 0.1.0
+ * @category Refinements
+ * @example
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.strictEqual(await AI.isEmpty(async function* () {})(), true)
+ *     assert.strictEqual(
+ *       await AI.isEmpty(async function* () {
+ *         yield 1
+ *       })(),
+ *       false
+ *     )
+ *   }
+ *
+ *   test()
  */
-export const isEmpty = <A>(iter: AsyncIter<A>): Task<boolean> =>
+export const isEmpty =
+  <A>(iter: AsyncIter<A>): Task<boolean> =>
   async () => {
     for await (const _ of iter()) {
       return false
@@ -762,20 +995,25 @@ export const isEmpty = <A>(iter: AsyncIter<A>): Task<boolean> =>
 /**
  * Test whether an async iterator is non empty
  *
- * @example
- * import { asyncIter as AI } from 'fp-ts-iter'
- *
- * async function test() {
- *   assert.strictEqual(await AI.isNonEmpty(async function* () {})(), false)
- *   assert.strictEqual(await AI.isNonEmpty(async function* () { yield 1 })(), true)
- * }
- *
- * test()
- *
- * @category refinements
  * @since 0.1.0
+ * @category Refinements
+ * @example
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   async function test() {
+ *     assert.strictEqual(await AI.isNonEmpty(async function* () {})(), false)
+ *     assert.strictEqual(
+ *       await AI.isNonEmpty(async function* () {
+ *         yield 1
+ *       })(),
+ *       true
+ *     )
+ *   }
+ *
+ *   test()
  */
-export const isNonEmpty = <A>(iter: AsyncIter<A>): Task<boolean> =>
+export const isNonEmpty =
+  <A>(iter: AsyncIter<A>): Task<boolean> =>
   async () => {
     for await (const _ of iter()) {
       return true
@@ -792,6 +1030,39 @@ export const isNonEmpty = <A>(iter: AsyncIter<A>): Task<boolean> =>
  *
  * @since 0.1.0
  * @category Monad
+ * @example
+ *   import { pipe } from 'fp-ts/lib/function'
+ *   import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ *   const delay = (ms: number) =>
+ *     new Promise((resolve) => setTimeout(resolve, ms))
+ *
+ *   async function test() {
+ *     const start = Date.now()
+ *
+ *     const result = await pipe(
+ *       async function* () {
+ *         yield 1
+ *         yield 2
+ *         yield 3
+ *       },
+ *       AI.chainPar(2)(
+ *         (n) =>
+ *           async function* () {
+ *             await delay(100) // Simulate async work
+ *             yield n * 10
+ *             yield n * 100
+ *           }
+ *       ),
+ *       AI.toArray
+ *     )()
+ *
+ *     const elapsed = Date.now() - start
+ *     // Should complete in ~200ms (not 300ms) due to concurrency=2
+ *     assert.deepStrictEqual(result, [10, 100, 20, 200, 30, 300])
+ *   }
+ *
+ *   test()
  */
 export const chainPar =
   (concurrency: number) =>
