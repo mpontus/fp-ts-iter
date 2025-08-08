@@ -2,3 +2,49 @@
 title: Home
 nav_order: 1
 ---
+
+# fp-ts-iter
+
+Functional async iterators for TypeScript, built on fp-ts.
+
+## Quick Start
+
+```typescript
+import { pipe } from 'fp-ts/function'
+import * as AI from 'fp-ts-iter/AsyncIter'
+
+const result = pipe(
+  AI.fromIterable([1, 2, 3, 4, 5]),
+  AI.map(x => x * 2),
+  AI.filter(x => x > 4),
+  AI.toArray
+)
+
+console.log(await result()) // [6, 8, 10]
+```
+
+## Error Handling
+
+```typescript
+import * as AIE from 'fp-ts-iter/AsyncIterEither'
+
+const parseNumber = (s: string) => 
+  isNaN(+s) ? AIE.left('Invalid') : AIE.right(+s)
+
+const result = pipe(
+  AIE.of('1', '2', 'bad', '4'),
+  AIE.chain(parseNumber),
+  AIE.toArray
+)
+// Returns E.left('Invalid') on first error
+```
+
+## Types
+
+- **`AsyncIter<A>`** - Lazy async iterators
+- **`AsyncIterEither<E, A>`** - Async iterators with error handling
+
+## Documentation
+
+- [AsyncIter API](modules/AsyncIter.ts.html)
+- [AsyncIterEither API](modules/AsyncIterEither.ts.html)
