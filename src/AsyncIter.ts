@@ -34,6 +34,7 @@ import {
 } from 'fp-ts/lib/Chain'
 import { Compactable1 } from 'fp-ts/lib/Compactable'
 import { Either } from 'fp-ts/lib/Either'
+import { Eq } from 'fp-ts/lib/Eq'
 import { Filterable1 } from 'fp-ts/lib/Filterable'
 import {
   chainFirstIOK as chainFirstIOK_,
@@ -565,6 +566,114 @@ export const separate: Filterable1<URI>['separate'] =
   partitionMap(identity)
 
 /**
+ * Test whether a value is an element of an async iterator.
+ *
+ * @example
+ * import { asyncIter as AI } from 'fp-ts-iter'
+ * import { eqNumber } from 'fp-ts/lib/Eq'
+ *
+ * async function test() {
+ *   assert.strictEqual(
+ *     await AI.elem(eqNumber)(2)(async function* () { yield 1; yield 2; yield 3 })(),
+ *     true
+ *   )
+ *   assert.strictEqual(
+ *     await AI.elem(eqNumber)(4)(async function* () { yield 1; yield 2; yield 3 })(),
+ *     false
+ *   )
+ * }
+ *
+ * test()
+ *
+ * @category Combinators
+ * @since 0.1.0
+ */
+export const elem: <A>(E: Eq<A>) => (a: A) => (iter: AsyncIter<A>) => Task<boolean> =
+  (E) => (a) => (iter) =>
+    async () => {
+      for await (const value of iter()) {
+        if (E.equals(a, value)) {
+          return true
+        }
+      }
+      return false
+    }
+
+/**
+ * Check if any element in an async iterator satisfies a predicate.
+ *
+ * @example
+ * import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ * async function test() {
+ *   assert.strictEqual(
+ *     await AI.exists((n: number) => n > 2)(async function* () { yield 1; yield 2; yield 3 })(),
+ *     true
+ *   )
+ *   assert.strictEqual(
+ *     await AI.exists((n: number) => n > 5)(async function* () { yield 1; yield 2; yield 3 })(),
+ *     false
+ *   )
+ * }
+ *
+ * test()
+ *
+ * @category Combinators
+ * @since 0.1.0
+ */
+export const exists: <A>(predicate: Predicate<A>) => (iter: AsyncIter<A>) => Task<boolean> =
+  (predicate) => (iter) =>
+    async () => {
+      for await (const value of iter()) {
+        if (predicate(value)) {
+          return true
+        }
+      }
+      return false
+    }
+
+/**
+ * Alias for `exists`.
+ *
+ * @category Combinators
+ * @since 0.1.0
+ */
+export const some: <A>(predicate: Predicate<A>) => (iter: AsyncIter<A>) => Task<boolean> = exists
+
+/**
+ * Check if all elements in an async iterator satisfy a predicate.
+ *
+ * @example
+ * import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ * async function test() {
+ *   assert.strictEqual(
+ *     await AI.every((n: number) => n > 0)(async function* () { yield 1; yield 2; yield 3 })(),
+ *     true
+ *   )
+ *   assert.strictEqual(
+ *     await AI.every((n: number) => n > 2)(async function* () { yield 1; yield 2; yield 3 })(),
+ *     false
+ *   )
+ * }
+ *
+ * test()
+ *
+ * @category Combinators
+ * @since 0.1.0
+ */
+export const every: <A>(predicate: Predicate<A>) => (iter: AsyncIter<A>) => Task<boolean> =
+  (predicate) => (iter) =>
+    async () => {
+      for await (const value of iter()) {
+        if (!predicate(value)) {
+          return false
+        }
+      }
+      return true
+    }
+
+/**
  * Returns an `AsyncIter` that yields elements of the first `AsyncIter` followed
  * by the elements of the second `AsyncIter`.
  *
@@ -621,6 +730,58 @@ export const altW =
 export const alt: <A>(
   that: Lazy<AsyncIter<A>>
 ) => (fa: AsyncIter<A>) => AsyncIter<A> = altW
+
+// -------------------------------------------------------------------------------------
+// refinements
+// -------------------------------------------------------------------------------------
+
+/**
+ * Test whether an async iterator is empty
+ *
+ * @example
+ * import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ * async function test() {
+ *   assert.strictEqual(await AI.isEmpty(async function* () {})(), true)
+ *   assert.strictEqual(await AI.isEmpty(async function* () { yield 1 })(), false)
+ * }
+ *
+ * test()
+ *
+ * @category refinements
+ * @since 0.1.0
+ */
+export const isEmpty = <A>(iter: AsyncIter<A>): Task<boolean> =>
+  async () => {
+    for await (const _ of iter()) {
+      return false
+    }
+    return true
+  }
+
+/**
+ * Test whether an async iterator is non empty
+ *
+ * @example
+ * import { asyncIter as AI } from 'fp-ts-iter'
+ *
+ * async function test() {
+ *   assert.strictEqual(await AI.isNonEmpty(async function* () {})(), false)
+ *   assert.strictEqual(await AI.isNonEmpty(async function* () { yield 1 })(), true)
+ * }
+ *
+ * test()
+ *
+ * @category refinements
+ * @since 0.1.0
+ */
+export const isNonEmpty = <A>(iter: AsyncIter<A>): Task<boolean> =>
+  async () => {
+    for await (const _ of iter()) {
+      return true
+    }
+    return false
+  }
 
 // -------------------------------------------------------------------------------------
 // concurrency

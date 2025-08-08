@@ -1,5 +1,6 @@
 import {
   either as E,
+  eq as Eq,
   io as I,
   number as n,
   option as O,
@@ -509,6 +510,132 @@ describe('AsyncIter', () => {
         [1, 2, 3],
       ])
       expect(generator).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // -------------------------------------------------------------------------------------
+  // refinements
+  // -------------------------------------------------------------------------------------
+
+  describe('refinements', () => {
+    it('isEmpty should return true for empty iterator', async () => {
+      const empty = async function* () {}
+      expect(await _.isEmpty(empty)()).toBe(true)
+    })
+
+    it('isEmpty should return false for non-empty iterator', async () => {
+      const nonEmpty = of(1, 2, 3)
+      expect(await _.isEmpty(nonEmpty)()).toBe(false)
+    })
+
+    it('isNonEmpty should return false for empty iterator', async () => {
+      const empty = async function* () {}
+      expect(await _.isNonEmpty(empty)()).toBe(false)
+    })
+
+    it('isNonEmpty should return true for non-empty iterator', async () => {
+      const nonEmpty = of(1, 2, 3)
+      expect(await _.isNonEmpty(nonEmpty)()).toBe(true)
+    })
+  })
+
+  // -------------------------------------------------------------------------------------
+  // utility functions
+  // -------------------------------------------------------------------------------------
+
+  describe('utility functions', () => {
+    describe('elem', () => {
+      it('should return true when element exists', async () => {
+        const iter = of(1, 2, 3, 4, 5)
+        expect(await _.elem(Eq.eqNumber)(3)(iter)()).toBe(true)
+      })
+
+      it('should return false when element does not exist', async () => {
+        const iter = of(1, 2, 3, 4, 5)
+        expect(await _.elem(Eq.eqNumber)(6)(iter)()).toBe(false)
+      })
+
+      it('should return false for empty iterator', async () => {
+        const empty = async function* () {}
+        expect(await _.elem(Eq.eqNumber)(1)(empty)()).toBe(false)
+      })
+
+      it('should work with string equality', async () => {
+        const iter = of('a', 'b', 'c')
+        expect(await _.elem(Eq.eqString)('b')(iter)()).toBe(true)
+        expect(await _.elem(Eq.eqString)('d')(iter)()).toBe(false)
+      })
+    })
+
+    describe('exists', () => {
+      it('should return true when predicate matches some element', async () => {
+        const iter = of(1, 2, 3, 4, 5)
+        expect(await _.exists((n: number) => n > 3)(iter)()).toBe(true)
+      })
+
+      it('should return false when predicate matches no element', async () => {
+        const iter = of(1, 2, 3)
+        expect(await _.exists((n: number) => n > 5)(iter)()).toBe(false)
+      })
+
+      it('should return false for empty iterator', async () => {
+        const empty = async function* () {}
+        expect(await _.exists((n: number) => n > 0)(empty)()).toBe(false)
+      })
+
+      it('should short-circuit on first match', async () => {
+        const iter = async function* () {
+          yield 1
+          yield 2
+          yield 10 // This should match and stop iteration
+          yield 4
+          yield 5
+        }
+        expect(await _.exists((n: number) => n > 5)(iter)()).toBe(true)
+      })
+    })
+
+    describe('some', () => {
+      it('should be an alias for exists', () => {
+        expect(_.some).toBe(_.exists)
+      })
+
+      it('should work identically to exists', async () => {
+        const iter = of(1, 2, 3, 4, 5)
+        const predicate = (n: number) => n > 3
+
+        expect(await _.some(predicate)(iter)()).toBe(
+          await _.exists(predicate)(iter)()
+        )
+      })
+    })
+
+    describe('every', () => {
+      it('should return true when all elements satisfy predicate', async () => {
+        const iter = of(2, 4, 6, 8)
+        expect(await _.every((n: number) => n % 2 === 0)(iter)()).toBe(true)
+      })
+
+      it('should return false when some element does not satisfy predicate', async () => {
+        const iter = of(2, 4, 5, 8)
+        expect(await _.every((n: number) => n % 2 === 0)(iter)()).toBe(false)
+      })
+
+      it('should return true for empty iterator', async () => {
+        const empty = async function* () {}
+        expect(await _.every((n: number) => n > 0)(empty)()).toBe(true)
+      })
+
+      it('should short-circuit on first non-match', async () => {
+        const iter = async function* () {
+          yield 2
+          yield 4
+          yield 5 // This should not match and stop iteration
+          yield 8
+          yield 10
+        }
+        expect(await _.every((n: number) => n % 2 === 0)(iter)()).toBe(false)
+      })
     })
   })
 })
