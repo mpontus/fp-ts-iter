@@ -1,7 +1,7 @@
 {
   "name": "fp-ts-iter",
   "homepage": "https://mpontus.github.io/fp-ts-iter/",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "main": "dist/index.js",
   "license": "MIT",
   "peerDependencies": {
